@@ -1,0 +1,17 @@
+{
+  "package": "sonic_tracking_20261019_v4",
+  "installer_release": "20261019-tracking-installer-04",
+  "runtime_identical_to": "sonic_tracking_20261015_v3",
+  "offline_tests_passed": 56,
+  "hardware_actions": 0,
+  "robot_hook_installation": "not_installed_by_agent; user runs --install",
+  "fixes": [
+    "ignore only own installer ancestor process matches",
+    "do not treat camera package path as controller",
+    "require complete hook files before recording"
+  ],
+  "evidence": [
+    "/data/tmp/sonic_tracking_review.7qxCfL/operation.log",
+    "/data/tmp/sonic_tracking_review.fMMnM7/operation.log"
+  ]
+}

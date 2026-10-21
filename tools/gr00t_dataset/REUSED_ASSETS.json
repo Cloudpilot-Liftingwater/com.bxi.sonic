@@ -1,0 +1,24 @@
+{
+  "source_repository": "Isaac-GR00T with the existing local ELF3 adaptations",
+  "git_base_commit": "b9955401d50c92a29258732e3ad6ccd579f1bdc0",
+  "working_tree_has_local_changes": true,
+  "files": {
+    "elf3_native_1d_config.py": {
+      "source_relative": "examples/ELF3/native_1d/elf3_native_1d_config.py",
+      "sha256": "b45ee66dfc69622414c1913f44b5e7596c3bba963ea6548971fb90d26aaf0187",
+      "copied_without_modification": true
+    },
+    "elf3_native_1d_abi.json": {
+      "source_relative": "examples/ELF3/native_1d/elf3_native_1d_abi.json",
+      "sha256": "ba6893ca379641421576c3fa2d64d5bf01500e49261ce95aa40e130a702b3d58",
+      "copied_without_modification": true,
+      "source_sha256": "ba6893ca379641421576c3fa2d64d5bf01500e49261ce95aa40e130a702b3d58",
+      "change": "Both maintained SONIC/Isaac-GR00T copies unified to absolute motor radians on 2026-10-21; legacy simulation ABI retained separately"
+    },
+    "modality.json": {
+      "source_relative": "examples/ELF3/native_1d/modality.json",
+      "sha256": "f63cdc5b3d699ef3c0e52a86464cbc2b4f6fe3a12cd29ec7f6740175ab2350d3",
+      "copied_without_modification": true
+    }
+  }
+}

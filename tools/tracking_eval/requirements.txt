@@ -1,0 +1,4 @@
+# Workstation versions used for the real-run replay; install explicitly if needed.
+numpy==1.26.4
+onnxruntime==1.23.2
+matplotlib==3.5.1

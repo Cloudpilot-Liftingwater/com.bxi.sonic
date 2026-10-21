@@ -1,0 +1,28 @@
+{
+  "audit_date": "2026-10-15",
+  "local_repo_commit": "e3018c79f1a0c92b254470db312c25d08794806d",
+  "smplsim_commit": "b5c08720503ad5fff64050c4d289c42d947fcf8d",
+  "official_callback_url": "https://github.com/NVlabs/GR00T-WholeBodyControl/blob/main/gear_sonic/trl/callbacks/im_eval_callback.py",
+  "metric_source_url": "https://github.com/ZhengyiLuo/SMPLSim/blob/b5c08720503ad5fff64050c4d289c42d947fcf8d/smpl_sim/smpllib/smpl_eval.py",
+  "sources": {
+    "local_eval_callback": {
+      "path": "/data/ros2_ws/GR00T-WholeBodyControl/gear_sonic/trl/callbacks/im_eval_callback.py",
+      "sha256": "c2306401ca18776ba1fd762e6c0367bf83d70b651047d06384774ae0a80ee8f9"
+    },
+    "smplsim_metrics": {
+      "path": "/data/tmp/SMPLSim_check/smpl_sim/smpllib/smpl_eval.py",
+      "sha256": "3f319ce4c655b08fe26614448dabfbd3ff374c907198158918b1b63429c6cc15"
+    },
+    "elf3_eval_config": {
+      "path": "/data/ros2_ws/GR00T-WholeBodyControl/gear_sonic/config/exp/manager/universal_token/all_modes/sonic_elf3_native.yaml",
+      "sha256": "008d5c20609e48e9ec7aed07b9a4bd48358e80cc12067af41d46a13ac1b9c6ca"
+    },
+    "obsidian_eval_report": {
+      "path": "/home/huangchenwei/obsidianwork/work/任务日志/超参数ablation.md",
+      "sha256": "99dcc614f61e1414f7848f14eeac52b83357c64ac2f0c290ff92c6c184c8f015"
+    }
+  },
+  "note": "Local ELF3 callback has modifications. Core position metric formula verified against SMPLSim; official current callback does not pass robot rotations.",
+  "kinematic_reference_manifest": "kinematic_manifest.json",
+  "release": "sonic_eval_20261015_v2"
+}

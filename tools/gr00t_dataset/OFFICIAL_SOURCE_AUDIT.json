@@ -1,0 +1,41 @@
+{
+  "repository": "https://github.com/NVIDIA/Isaac-GR00T",
+  "commit": "dac54b313160c201c450f97df0fd74ebd379c892",
+  "files": {
+    "getting_started/data_preparation.md": "6771ae919f841898371822b9d2cd4ffeea5c6c9c6f84c1b2d6725acc661b8f9d",
+    "getting_started/finetune_new_embodiment.md": "0866df58044a77b4581590c44f05bad3fb3e8947a1e6cd16e1b62e4030f97c26",
+    "gr00t/data/dataset/lerobot_episode_loader.py": "10eb986f35d298fc3e099f8891532a907978b34e0a2f88a9c62620c554d9726d",
+    "gr00t/data/dataset/sharded_single_step_dataset.py": "8d4cfeb4beee92a0d4b4a042b953ebbd1fb5e1e862a38c77f366ce5e37effb80",
+    "gr00t/data/state_action/state_action_processor.py": "0151dd0bb6cb727fd401bf78121efc532e7184f2575e6ef25294085f629ac145",
+    "gr00t/data/stats.py": "54fffdaa0a2bcf5356926e4d73b10dbbb9c848e0a56582427e4252f054938c74",
+    "gr00t/experiment/launch_finetune.py": "5f259a9453957fb08d21e7a0ec5febd29c986cdb7e031ee2a4573628bfc30852",
+    "gr00t/configs/model/gr00t_n1d7.py": "379ff708496a73b25b12f4656850284a16fde0e205828e2a0c0be0af61463744"
+  },
+  "current_training_baseline": "Existing local ELF3 native_1d, base commit b9955401d50c92a29258732e3ad6ccd579f1bdc0 plus existing ELF3 adaptations",
+  "prior_official_lookup_is_reference_only": true,
+  "current_contract_evidence": "REUSED_ASSETS.json",
+  "frequency_recheck_20261020": {
+    "universal_gr00t_50hz_requirement": false,
+    "official_example_fps": 30,
+    "sonic_tutorial_control_hz": 50,
+    "sonic_camera_default_fps": 30,
+    "gr00t_video_selection": "frame indices",
+    "urls": [
+      "https://raw.githubusercontent.com/NVIDIA/Isaac-GR00T/main/demo_data/cube_to_bowl_5/meta/info.json",
+      "https://nvlabs.github.io/GR00T-WholeBodyControl/tutorials/vla_workflow.html",
+      "https://github.com/NVlabs/GR00T-WholeBodyControl/blob/main/gear_sonic/camera/composed_camera.py",
+      "https://github.com/NVIDIA/Isaac-GR00T/blob/main/gr00t/data/dataset/lerobot_episode_loader.py",
+      "https://github.com/huggingface/lerobot/blob/v0.3.3/src/lerobot/datasets/utils.py"
+    ],
+    "live_main_sources_are_not_a_pinned_training_environment": true
+  },
+  "official_writer_reuse_20261020": {
+    "commit": "45c03facbf848e0c743091b7d9c17952096ff908",
+    "source": "vendor/sonic_data/UPSTREAM.json",
+    "patch": "vendor/sonic_data/LOCAL_CHANGES.patch",
+    "stats_source": "vendor/GR00T_STATS_UPSTREAM.json",
+    "entry_transport": "retained ELF3 ROS source adapter; not G1 ZMQ entry",
+    "robot_changed": false,
+    "correction_20261021": "Previously named e3018 is a local ELF3 integration commit, not NVIDIA upstream"
+  }
+}

@@ -1,0 +1,47 @@
+{
+  "release": "sonic-tracking-eval-library-20261019",
+  "recording_source": "sonic_tracking_20261019_v4",
+  "evaluation_source": "sonic_eval_20261015_v2",
+  "robot_package_sha256": "26e52d64461f556716e8495737868bb4bb7a7addf1732583cfd6bd790bb3db05",
+  "changes": [
+    "local relative paths for launcher and evaluator",
+    "optional workstation SONIC_EVAL_PYTHON",
+    "usage/readme and packaging metadata"
+  ],
+  "control_sources_modified": false,
+  "robot_actions": 0,
+  "field_evidence": [
+    "run.O6cEXF: 15s, 724 trace",
+    "run.DICc1i: 120s, 6000 trace, 99499 scored states; operator confirmed multiple A+X pauses"
+  ],
+  "validation": {
+    "offline_tests_passed": 84,
+    "offline_tests_skipped": 1,
+    "skip_reason": "legacy development v3 directory not bundled; legacy-byte-comparison test skipped",
+    "shell_syntax": "pass",
+    "remote_package_embedded_manifest": "pass",
+    "real_run_replay": "run.O6cEXF; 15 seconds; 724 trace; 14387 scored states",
+    "replay_identical_files": [
+      "report.json",
+      "eval_report.json",
+      "joint_metrics.csv",
+      "reference_joint_metrics.csv",
+      "tracking_reference.html"
+    ],
+    "original_control_code": "unchanged; final repository integrity check performed during installation"
+  },
+  "connection_update_20261020": {
+    "default_host": "bxi@192.168.88.149",
+    "verified_host_key_alias": "elf3-test-01.local",
+    "strict_host_key_checking": true,
+    "algorithm_and_robot_package_changed": false,
+    "robot_actions": 0
+  },
+  "field_sync_20261020": {
+    "archive": "/data/ros2_ws/robot_software_snapshots/robot_20261020_Elb7su",
+    "root_policy_matches_robot": true,
+    "tap_matches_robot": true,
+    "evaluation_algorithms_changed": false,
+    "note": "earlier control_sources_modified=false describes 20261019 tools-only integration"
+  }
+}

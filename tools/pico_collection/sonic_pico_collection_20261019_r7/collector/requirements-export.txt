@@ -1,0 +1,6 @@
+# Keep export dependencies separate from the ROS collection environment.
+# LeRobot 0.3.3 reports CODEBASE_VERSION=v2.1; >=0.4 writes v3.
+lerobot==0.3.3
+numpy>=1.26,<3
+opencv-python-headless>=4.8,<5
+pyarrow>=14,<20

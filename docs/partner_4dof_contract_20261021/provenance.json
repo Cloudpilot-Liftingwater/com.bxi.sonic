@@ -1,0 +1,7 @@
+{
+  "layout_source": "Existing Isaac-GR00T/examples/ELF3/modality.json",
+  "layout_sha256": "9b3bceac409bef0f80bfb0cec7140843492cc925888b60c464294c76e5cd3c6d",
+  "legacy_semantics": "Old ELF3 checkpoint uses driven+mimic coordinates per side. Matching 68D width alone does not establish semantic/checkpoint compatibility.",
+  "writer_source": "NVlabs/GR00T-WholeBodyControl commit e3018c79f1a0c92b254470db312c25d08794806d",
+  "purpose": "Interface draft only. No training config registered, no robot code changed for 4DoF, no real 4DoF data validation claimed."
+}

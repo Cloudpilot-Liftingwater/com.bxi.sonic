@@ -1,0 +1,9 @@
+{
+  "archive": "/data/dataset/东华VLA资产/BXI_whole_body_vla_dataset_isaac/datasets/elf3_box_carry_50eps_20260731_193249_lerobot_v21.tar.zst",
+  "extracted_metadata": [
+    "elf3_box_carry_3cam_20260731_193249_lerobot_v21/data/chunk-000/episode_000000.parquet",
+    "elf3_box_carry_3cam_20260731_193249_lerobot_v21/meta/info.json",
+    "elf3_box_carry_3cam_20260731_193249_lerobot_v21/meta/modality.json",
+    "elf3_box_carry_3cam_20260731_193249_lerobot_v21/meta/tasks.jsonl"
+  ]
+}

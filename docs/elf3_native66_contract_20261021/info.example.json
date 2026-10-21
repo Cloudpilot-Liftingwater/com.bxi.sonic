@@ -1,0 +1,290 @@
+{
+    "codebase_version": "v2.1",
+    "robot_type": "elf3_sonic_native_1d",
+    "total_episodes": 1,
+    "total_frames": 120,
+    "total_tasks": 1,
+    "total_videos": 3,
+    "total_chunks": 1,
+    "chunks_size": 1000,
+    "fps": 50,
+    "splits": {
+        "train": "0:1"
+    },
+    "data_path": "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
+    "video_path": "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4",
+    "features": {
+        "observation.state": {
+            "dtype": "float32",
+            "shape": [
+                31
+            ],
+            "names": [
+                "waist_y_joint",
+                "waist_x_joint",
+                "waist_z_joint",
+                "l_hip_y_joint",
+                "l_hip_x_joint",
+                "l_hip_z_joint",
+                "l_knee_y_joint",
+                "l_ankle_y_joint",
+                "l_ankle_x_joint",
+                "r_hip_y_joint",
+                "r_hip_x_joint",
+                "r_hip_z_joint",
+                "r_knee_y_joint",
+                "r_ankle_y_joint",
+                "r_ankle_x_joint",
+                "l_shoulder_y_joint",
+                "l_shoulder_x_joint",
+                "l_shoulder_z_joint",
+                "l_elbow_y_joint",
+                "l_wrist_x_joint",
+                "l_wrist_y_joint",
+                "l_wrist_z_joint",
+                "r_shoulder_y_joint",
+                "r_shoulder_x_joint",
+                "r_shoulder_z_joint",
+                "r_elbow_y_joint",
+                "r_wrist_x_joint",
+                "r_wrist_y_joint",
+                "r_wrist_z_joint",
+                "l_gripper_motor_joint",
+                "r_gripper_motor_joint"
+            ]
+        },
+        "observation.projected_gravity": {
+            "dtype": "float32",
+            "shape": [
+                3
+            ],
+            "names": [
+                "gravity_x",
+                "gravity_y",
+                "gravity_z"
+            ]
+        },
+        "action.motion_token": {
+            "dtype": "float32",
+            "shape": [
+                64
+            ],
+            "names": [
+                "token_0",
+                "token_1",
+                "token_2",
+                "token_3",
+                "token_4",
+                "token_5",
+                "token_6",
+                "token_7",
+                "token_8",
+                "token_9",
+                "token_10",
+                "token_11",
+                "token_12",
+                "token_13",
+                "token_14",
+                "token_15",
+                "token_16",
+                "token_17",
+                "token_18",
+                "token_19",
+                "token_20",
+                "token_21",
+                "token_22",
+                "token_23",
+                "token_24",
+                "token_25",
+                "token_26",
+                "token_27",
+                "token_28",
+                "token_29",
+                "token_30",
+                "token_31",
+                "token_32",
+                "token_33",
+                "token_34",
+                "token_35",
+                "token_36",
+                "token_37",
+                "token_38",
+                "token_39",
+                "token_40",
+                "token_41",
+                "token_42",
+                "token_43",
+                "token_44",
+                "token_45",
+                "token_46",
+                "token_47",
+                "token_48",
+                "token_49",
+                "token_50",
+                "token_51",
+                "token_52",
+                "token_53",
+                "token_54",
+                "token_55",
+                "token_56",
+                "token_57",
+                "token_58",
+                "token_59",
+                "token_60",
+                "token_61",
+                "token_62",
+                "token_63"
+            ]
+        },
+        "action.wbc": {
+            "dtype": "float32",
+            "shape": [
+                31
+            ],
+            "names": [
+                "waist_y_joint",
+                "waist_x_joint",
+                "waist_z_joint",
+                "l_hip_y_joint",
+                "l_hip_x_joint",
+                "l_hip_z_joint",
+                "l_knee_y_joint",
+                "l_ankle_y_joint",
+                "l_ankle_x_joint",
+                "r_hip_y_joint",
+                "r_hip_x_joint",
+                "r_hip_z_joint",
+                "r_knee_y_joint",
+                "r_ankle_y_joint",
+                "r_ankle_x_joint",
+                "l_shoulder_y_joint",
+                "l_shoulder_x_joint",
+                "l_shoulder_z_joint",
+                "l_elbow_y_joint",
+                "l_wrist_x_joint",
+                "l_wrist_y_joint",
+                "l_wrist_z_joint",
+                "r_shoulder_y_joint",
+                "r_shoulder_x_joint",
+                "r_shoulder_z_joint",
+                "r_elbow_y_joint",
+                "r_wrist_x_joint",
+                "r_wrist_y_joint",
+                "r_wrist_z_joint",
+                "l_gripper_motor_joint",
+                "r_gripper_motor_joint"
+            ]
+        },
+        "observation.images.ego_view": {
+            "dtype": "video",
+            "shape": [
+                480,
+                640,
+                3
+            ],
+            "names": [
+                "height",
+                "width",
+                "channels"
+            ],
+            "info": {
+                "video.height": 480,
+                "video.width": 640,
+                "video.codec": "h264",
+                "video.pix_fmt": "yuv420p",
+                "video.is_depth_map": false,
+                "video.fps": 50,
+                "video.channels": 3,
+                "has_audio": false
+            }
+        },
+        "observation.images.left_wrist": {
+            "dtype": "video",
+            "shape": [
+                480,
+                640,
+                3
+            ],
+            "names": [
+                "height",
+                "width",
+                "channels"
+            ],
+            "info": {
+                "video.height": 480,
+                "video.width": 640,
+                "video.codec": "h264",
+                "video.pix_fmt": "yuv420p",
+                "video.is_depth_map": false,
+                "video.fps": 50,
+                "video.channels": 3,
+                "has_audio": false
+            }
+        },
+        "observation.images.right_wrist": {
+            "dtype": "video",
+            "shape": [
+                480,
+                640,
+                3
+            ],
+            "names": [
+                "height",
+                "width",
+                "channels"
+            ],
+            "info": {
+                "video.height": 480,
+                "video.width": 640,
+                "video.codec": "h264",
+                "video.pix_fmt": "yuv420p",
+                "video.is_depth_map": false,
+                "video.fps": 50,
+                "video.channels": 3,
+                "has_audio": false
+            }
+        },
+        "timestamp": {
+            "dtype": "float32",
+            "shape": [
+                1
+            ],
+            "names": null
+        },
+        "frame_index": {
+            "dtype": "int64",
+            "shape": [
+                1
+            ],
+            "names": null
+        },
+        "episode_index": {
+            "dtype": "int64",
+            "shape": [
+                1
+            ],
+            "names": null
+        },
+        "index": {
+            "dtype": "int64",
+            "shape": [
+                1
+            ],
+            "names": null
+        },
+        "task_index": {
+            "dtype": "int64",
+            "shape": [
+                1
+            ],
+            "names": null
+        }
+    },
+    "script_config": {
+        "adapter": "elf3_ros_saved_source_v1",
+        "gripper_coordinate": "absolute_motor_radians",
+        "source": "ELF3 ROS2 synchronized actual inference rows",
+        "camera_policy": "latest_available_rgb_on_actual_inference_rows"
+    },
+    "discarded_episode_indices": []
+}

@@ -1,0 +1,310 @@
+{
+  "contract": "ELF3_TEST01_NATIVE66_ABSOLUTE_MOTOR_RADIANS",
+  "version": "20261021-v2-joined-episode",
+  "source": "existing ELF3 Native 1DoF contract; no partner-specific remapping",
+  "dataset_format": "LeRobot v2.1",
+  "frequency_hz": 50,
+  "action_horizon": 40,
+  "model_state": {
+    "dimension": 34,
+    "order": [
+      "body29",
+      "left_motor_rad",
+      "right_motor_rad",
+      "projected_gravity3"
+    ]
+  },
+  "model_action": {
+    "dimension": 66,
+    "order": [
+      "motion_token64",
+      "left_target_motor_rad",
+      "right_target_motor_rad"
+    ],
+    "slices": {
+      "motion_token": [
+        0,
+        64
+      ],
+      "left_gripper": [
+        64,
+        65
+      ],
+      "right_gripper": [
+        65,
+        66
+      ]
+    }
+  },
+  "joint_order": [
+    "waist_y_joint",
+    "waist_x_joint",
+    "waist_z_joint",
+    "l_hip_y_joint",
+    "l_hip_x_joint",
+    "l_hip_z_joint",
+    "l_knee_y_joint",
+    "l_ankle_y_joint",
+    "l_ankle_x_joint",
+    "r_hip_y_joint",
+    "r_hip_x_joint",
+    "r_hip_z_joint",
+    "r_knee_y_joint",
+    "r_ankle_y_joint",
+    "r_ankle_x_joint",
+    "l_shoulder_y_joint",
+    "l_shoulder_x_joint",
+    "l_shoulder_z_joint",
+    "l_elbow_y_joint",
+    "l_wrist_x_joint",
+    "l_wrist_y_joint",
+    "l_wrist_z_joint",
+    "r_shoulder_y_joint",
+    "r_shoulder_x_joint",
+    "r_shoulder_z_joint",
+    "r_elbow_y_joint",
+    "r_wrist_x_joint",
+    "r_wrist_y_joint",
+    "r_wrist_z_joint",
+    "l_gripper_motor_joint",
+    "r_gripper_motor_joint"
+  ],
+  "parquet_columns": {
+    "observation.state": {
+      "type": "float32",
+      "shape": [
+        31
+      ],
+      "names": [
+        "waist_y_joint",
+        "waist_x_joint",
+        "waist_z_joint",
+        "l_hip_y_joint",
+        "l_hip_x_joint",
+        "l_hip_z_joint",
+        "l_knee_y_joint",
+        "l_ankle_y_joint",
+        "l_ankle_x_joint",
+        "r_hip_y_joint",
+        "r_hip_x_joint",
+        "r_hip_z_joint",
+        "r_knee_y_joint",
+        "r_ankle_y_joint",
+        "r_ankle_x_joint",
+        "l_shoulder_y_joint",
+        "l_shoulder_x_joint",
+        "l_shoulder_z_joint",
+        "l_elbow_y_joint",
+        "l_wrist_x_joint",
+        "l_wrist_y_joint",
+        "l_wrist_z_joint",
+        "r_shoulder_y_joint",
+        "r_shoulder_x_joint",
+        "r_shoulder_z_joint",
+        "r_elbow_y_joint",
+        "r_wrist_x_joint",
+        "r_wrist_y_joint",
+        "r_wrist_z_joint",
+        "l_gripper_motor_joint",
+        "r_gripper_motor_joint"
+      ]
+    },
+    "observation.projected_gravity": {
+      "type": "float32",
+      "shape": [
+        3
+      ],
+      "names": [
+        "gravity_x",
+        "gravity_y",
+        "gravity_z"
+      ]
+    },
+    "action.motion_token": {
+      "type": "float32",
+      "shape": [
+        64
+      ],
+      "names": [
+        "token_0",
+        "token_1",
+        "token_2",
+        "token_3",
+        "token_4",
+        "token_5",
+        "token_6",
+        "token_7",
+        "token_8",
+        "token_9",
+        "token_10",
+        "token_11",
+        "token_12",
+        "token_13",
+        "token_14",
+        "token_15",
+        "token_16",
+        "token_17",
+        "token_18",
+        "token_19",
+        "token_20",
+        "token_21",
+        "token_22",
+        "token_23",
+        "token_24",
+        "token_25",
+        "token_26",
+        "token_27",
+        "token_28",
+        "token_29",
+        "token_30",
+        "token_31",
+        "token_32",
+        "token_33",
+        "token_34",
+        "token_35",
+        "token_36",
+        "token_37",
+        "token_38",
+        "token_39",
+        "token_40",
+        "token_41",
+        "token_42",
+        "token_43",
+        "token_44",
+        "token_45",
+        "token_46",
+        "token_47",
+        "token_48",
+        "token_49",
+        "token_50",
+        "token_51",
+        "token_52",
+        "token_53",
+        "token_54",
+        "token_55",
+        "token_56",
+        "token_57",
+        "token_58",
+        "token_59",
+        "token_60",
+        "token_61",
+        "token_62",
+        "token_63"
+      ]
+    },
+    "action.wbc": {
+      "type": "float32",
+      "shape": [
+        31
+      ],
+      "names": [
+        "waist_y_joint",
+        "waist_x_joint",
+        "waist_z_joint",
+        "l_hip_y_joint",
+        "l_hip_x_joint",
+        "l_hip_z_joint",
+        "l_knee_y_joint",
+        "l_ankle_y_joint",
+        "l_ankle_x_joint",
+        "r_hip_y_joint",
+        "r_hip_x_joint",
+        "r_hip_z_joint",
+        "r_knee_y_joint",
+        "r_ankle_y_joint",
+        "r_ankle_x_joint",
+        "l_shoulder_y_joint",
+        "l_shoulder_x_joint",
+        "l_shoulder_z_joint",
+        "l_elbow_y_joint",
+        "l_wrist_x_joint",
+        "l_wrist_y_joint",
+        "l_wrist_z_joint",
+        "r_shoulder_y_joint",
+        "r_shoulder_x_joint",
+        "r_shoulder_z_joint",
+        "r_elbow_y_joint",
+        "r_wrist_x_joint",
+        "r_wrist_y_joint",
+        "r_wrist_z_joint",
+        "l_gripper_motor_joint",
+        "r_gripper_motor_joint"
+      ]
+    },
+    "timestamp": {
+      "type": "float32",
+      "shape": [],
+      "meaning": "frame_index / 50 seconds within cleaned training episode"
+    },
+    "frame_index": {
+      "type": "int64",
+      "shape": []
+    },
+    "episode_index": {
+      "type": "int64",
+      "shape": []
+    },
+    "index": {
+      "type": "int64",
+      "shape": []
+    },
+    "task_index": {
+      "type": "int64",
+      "shape": []
+    }
+  },
+  "gripper": {
+    "coordinate": "absolute_motor_radians",
+    "closed_rad": 0.0,
+    "open_rad": 5.235987755982989,
+    "measured_source": "position_rad",
+    "target_source": "final command.position",
+    "left_training_index": 29,
+    "right_training_index": 30,
+    "site_bus": {
+      "left": 5,
+      "right": 6
+    },
+    "normalization": "dataset motor-radian statistics; denormalize before sending; no opening-coordinate mapping"
+  },
+  "video": {
+    "keys": [
+      "observation.images.ego_view",
+      "observation.images.left_wrist",
+      "observation.images.right_wrist"
+    ],
+    "decoded_type": "uint8 RGB",
+    "decoded_shape": [
+      480,
+      640,
+      3
+    ],
+    "container": "mp4",
+    "codec": "h264",
+    "pixel_format": "yuv420p",
+    "training_fps": 50,
+    "source_fps_nominal": 30,
+    "alignment": "latest valid source image at each real inference sample; repeat image only",
+    "maximum_image_age_s": 0.1,
+    "resize": "preserve aspect ratio, black letterbox"
+  },
+  "task": {
+    "language_key": "annotation.human.task_description",
+    "lookup": "task_index -> meta/tasks.jsonl task",
+    "post_labeling_allowed": true
+  },
+  "pause": "one raw logical episode -> one training episode; remove pause/gap time, concatenate real valid rows and all videos; 40-step windows may cross removed pauses; retain original timestamps and per-row capture_segments for provenance",
+  "embodiment_tag": "ELF3_NATIVE_1D",
+  "embodiment_value": "elf3_native_1d",
+  "projector_slot": 14,
+  "sonic_tokenizer_sha256": "50303783f72ca61674b54987cab20abd11d0ced25c7042062fb03ef6355cdfdf",
+  "not_in_training": [
+    "head_joint_angles",
+    "gripper_velocity",
+    "gripper_effort",
+    "depth_images",
+    "raw_SMPL"
+  ],
+  "validation_scope": "synthetic official writer + GR00T loader passed; field dataset acceptance and model training not claimed",
+  "export_release": "20261021-export-02-joined-episode"
+}

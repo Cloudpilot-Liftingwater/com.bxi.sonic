@@ -1,0 +1,403 @@
+{
+  "contract_version": "20261021-partner-4dof-draft-01",
+  "status": "DRAFT_REQUIRES_PARTNER_JOINT_CONFIRMATION",
+  "assumptions": [
+    "Same ELF3 29-body-joint order and SONIC model/token convention",
+    "User reports two gripper DoFs per side; independence and measured/command coordinates pending confirmation"
+  ],
+  "format": "LeRobot v2.1",
+  "frequency_hz": 50,
+  "frequency_scope": "project profile, not a universal GR00T requirement",
+  "model_state_dimension": 36,
+  "stored_state_dimension": 33,
+  "stored_wbc_dimension": 33,
+  "model_action_dimension": 68,
+  "action_horizon": 40,
+  "state_delta_indices": [
+    0
+  ],
+  "video_delta_indices": [
+    0
+  ],
+  "action_delta_indices": [
+    0,
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    12,
+    13,
+    14,
+    15,
+    16,
+    17,
+    18,
+    19,
+    20,
+    21,
+    22,
+    23,
+    24,
+    25,
+    26,
+    27,
+    28,
+    29,
+    30,
+    31,
+    32,
+    33,
+    34,
+    35,
+    36,
+    37,
+    38,
+    39
+  ],
+  "features": {
+    "observation.state": {
+      "dtype": "float32",
+      "shape": [
+        33
+      ],
+      "names": [
+        "waist_y_joint",
+        "waist_x_joint",
+        "waist_z_joint",
+        "l_hip_y_joint",
+        "l_hip_x_joint",
+        "l_hip_z_joint",
+        "l_knee_y_joint",
+        "l_ankle_y_joint",
+        "l_ankle_x_joint",
+        "r_hip_y_joint",
+        "r_hip_x_joint",
+        "r_hip_z_joint",
+        "r_knee_y_joint",
+        "r_ankle_y_joint",
+        "r_ankle_x_joint",
+        "l_shoulder_y_joint",
+        "l_shoulder_x_joint",
+        "l_shoulder_z_joint",
+        "l_elbow_y_joint",
+        "l_wrist_x_joint",
+        "l_wrist_y_joint",
+        "l_wrist_z_joint",
+        "r_shoulder_y_joint",
+        "r_shoulder_x_joint",
+        "r_shoulder_z_joint",
+        "r_elbow_y_joint",
+        "r_wrist_x_joint",
+        "r_wrist_y_joint",
+        "r_wrist_z_joint",
+        "left_gripper_dof_0",
+        "left_gripper_dof_1",
+        "right_gripper_dof_0",
+        "right_gripper_dof_1"
+      ],
+      "meaning": "measured body29 + gripper4 absolute positions",
+      "unit": "rad for body; gripper rad proposed, pending hardware confirmation"
+    },
+    "observation.projected_gravity": {
+      "dtype": "float32",
+      "shape": [
+        3
+      ],
+      "names": [
+        "gravity_x",
+        "gravity_y",
+        "gravity_z"
+      ],
+      "meaning": "unit gravity vector in robot base frame; same axes/sign/quaternion convention as the SONIC proprioception",
+      "unit": "dimensionless"
+    },
+    "action.motion_token": {
+      "dtype": "float32",
+      "shape": [
+        64
+      ],
+      "names": [
+        "token_0",
+        "token_1",
+        "token_2",
+        "token_3",
+        "token_4",
+        "token_5",
+        "token_6",
+        "token_7",
+        "token_8",
+        "token_9",
+        "token_10",
+        "token_11",
+        "token_12",
+        "token_13",
+        "token_14",
+        "token_15",
+        "token_16",
+        "token_17",
+        "token_18",
+        "token_19",
+        "token_20",
+        "token_21",
+        "token_22",
+        "token_23",
+        "token_24",
+        "token_25",
+        "token_26",
+        "token_27",
+        "token_28",
+        "token_29",
+        "token_30",
+        "token_31",
+        "token_32",
+        "token_33",
+        "token_34",
+        "token_35",
+        "token_36",
+        "token_37",
+        "token_38",
+        "token_39",
+        "token_40",
+        "token_41",
+        "token_42",
+        "token_43",
+        "token_44",
+        "token_45",
+        "token_46",
+        "token_47",
+        "token_48",
+        "token_49",
+        "token_50",
+        "token_51",
+        "token_52",
+        "token_53",
+        "token_54",
+        "token_55",
+        "token_56",
+        "token_57",
+        "token_58",
+        "token_59",
+        "token_60",
+        "token_61",
+        "token_62",
+        "token_63"
+      ],
+      "meaning": "actual post-FSQ decoder input from the synchronized SONIC inference; not a joint angle",
+      "unit": "model token; do not convert to radians"
+    },
+    "action.wbc": {
+      "dtype": "float32",
+      "shape": [
+        33
+      ],
+      "names": [
+        "waist_y_joint",
+        "waist_x_joint",
+        "waist_z_joint",
+        "l_hip_y_joint",
+        "l_hip_x_joint",
+        "l_hip_z_joint",
+        "l_knee_y_joint",
+        "l_ankle_y_joint",
+        "l_ankle_x_joint",
+        "r_hip_y_joint",
+        "r_hip_x_joint",
+        "r_hip_z_joint",
+        "r_knee_y_joint",
+        "r_ankle_y_joint",
+        "r_ankle_x_joint",
+        "l_shoulder_y_joint",
+        "l_shoulder_x_joint",
+        "l_shoulder_z_joint",
+        "l_elbow_y_joint",
+        "l_wrist_x_joint",
+        "l_wrist_y_joint",
+        "l_wrist_z_joint",
+        "r_shoulder_y_joint",
+        "r_shoulder_x_joint",
+        "r_shoulder_z_joint",
+        "r_elbow_y_joint",
+        "r_wrist_x_joint",
+        "r_wrist_y_joint",
+        "r_wrist_z_joint",
+        "left_gripper_dof_0",
+        "left_gripper_dof_1",
+        "right_gripper_dof_0",
+        "right_gripper_dof_1"
+      ],
+      "meaning": "issued target body29 + gripper4 absolute positions; not measured state",
+      "unit": "same joint coordinates/units as observation.state"
+    },
+    "observation.images.ego_view": {
+      "dtype": "video",
+      "shape": [
+        480,
+        640,
+        3
+      ],
+      "color": "RGB",
+      "codec": "H264",
+      "container": "MP4",
+      "pixel_format": "yuv420p",
+      "fps": 50,
+      "meaning": "matching frame index for each training row; original camera may be 30Hz"
+    },
+    "observation.images.left_wrist": {
+      "dtype": "video",
+      "shape": [
+        480,
+        640,
+        3
+      ],
+      "color": "RGB",
+      "codec": "H264",
+      "container": "MP4",
+      "pixel_format": "yuv420p",
+      "fps": 50,
+      "meaning": "matching frame index for each training row; original camera may be 30Hz"
+    },
+    "observation.images.right_wrist": {
+      "dtype": "video",
+      "shape": [
+        480,
+        640,
+        3
+      ],
+      "color": "RGB",
+      "codec": "H264",
+      "container": "MP4",
+      "pixel_format": "yuv420p",
+      "fps": 50,
+      "meaning": "matching frame index for each training row; original camera may be 30Hz"
+    },
+    "frame_index": {
+      "dtype": "int64",
+      "shape": [
+        1
+      ]
+    },
+    "episode_index": {
+      "dtype": "int64",
+      "shape": [
+        1
+      ]
+    },
+    "index": {
+      "dtype": "int64",
+      "shape": [
+        1
+      ]
+    },
+    "task_index": {
+      "dtype": "int64",
+      "shape": [
+        1
+      ]
+    },
+    "timestamp": {
+      "dtype": "float32",
+      "shape": [
+        1
+      ],
+      "unit": "s",
+      "meaning": "episode-relative training timestamp; frame_index / 50 within a continuous episode"
+    }
+  },
+  "gripper_mapping": [
+    {
+      "name": "left_gripper_dof_0",
+      "physical_joint_name": null,
+      "independently_commandable": null,
+      "measurement_source": null,
+      "command_source": null,
+      "unit": "rad (proposed)",
+      "zero_definition": null,
+      "positive_direction": null,
+      "min": null,
+      "max": null,
+      "confirmed": false
+    },
+    {
+      "name": "left_gripper_dof_1",
+      "physical_joint_name": null,
+      "independently_commandable": null,
+      "measurement_source": null,
+      "command_source": null,
+      "unit": "rad (proposed)",
+      "zero_definition": null,
+      "positive_direction": null,
+      "min": null,
+      "max": null,
+      "confirmed": false
+    },
+    {
+      "name": "right_gripper_dof_0",
+      "physical_joint_name": null,
+      "independently_commandable": null,
+      "measurement_source": null,
+      "command_source": null,
+      "unit": "rad (proposed)",
+      "zero_definition": null,
+      "positive_direction": null,
+      "min": null,
+      "max": null,
+      "confirmed": false
+    },
+    {
+      "name": "right_gripper_dof_1",
+      "physical_joint_name": null,
+      "independently_commandable": null,
+      "measurement_source": null,
+      "command_source": null,
+      "unit": "rad (proposed)",
+      "zero_definition": null,
+      "positive_direction": null,
+      "min": null,
+      "max": null,
+      "confirmed": false
+    }
+  ],
+  "embodiment_tag": null,
+  "embodiment_registration": "Confirm with training team; never silently alias existing ELF3 mimic-coordinate checkpoint or ELF3_NATIVE_1D",
+  "sonic_model": {
+    "motion_token_width": 64,
+    "body_action_width": 29,
+    "our_model_sha256": "50303783f72ca61674b54987cab20abd11d0ced25c7042062fb03ef6355cdfdf",
+    "partner_model_sha256": null
+  },
+  "data_path": "data/chunk-{episode_chunk:03d}/episode_{episode_index:06d}.parquet",
+  "video_path": "videos/chunk-{episode_chunk:03d}/{video_key}/episode_{episode_index:06d}.mp4",
+  "metadata_files": {
+    "meta/info.json": "LeRobot version, fps, robot_type, feature schema, lengths/counts and path templates",
+    "meta/modality.json": "Column slices and video/language bindings; provided in this package",
+    "meta/episodes.jsonl": "One JSON object per episode: episode_index, tasks, length",
+    "meta/tasks.jsonl": "One JSON object per instruction: task_index, task",
+    "meta/episodes_stats.jsonl": "Per-episode numeric statistics from writer",
+    "meta/stats.json": "Whole-dataset statistics including q01/q99 for actual physical joint coordinates",
+    "meta/source_map.json": "Original task/session to uninterrupted training episodes; pause boundary provenance"
+  },
+  "invariants": [
+    "No head joints in model input/output",
+    "Do not duplicate two motor coordinates into four and label them independent measured DoFs",
+    "No [q,q] mimic averaging for four independent joints",
+    "No fake or duplicated action tokens to fill a missed inference",
+    "Camera frames may repeat at 50Hz row rate; keep source time and freshness evidence in raw source",
+    "Raw A+X pause/resume remains one task; export separate uninterrupted episodes so 40-step windows do not cross the gap",
+    "All vectors finite and ordered as declared; feedback and command stored separately",
+    "Recompute normalization stats on actual data; do not reuse simulation opening-coordinate stats",
+    "Current test-01 collector/exporter supports 2 total gripper DoFs, not this proposed 4DoF variant"
+  ],
+  "pending": [
+    "Four physical joint names, independence, units, zero/sign/ranges",
+    "Partner body/SONIC model compatibility",
+    "Embodiment tag/processor registration and loader validation",
+    "Sample dataset from partner for end-to-end training-loader acceptance"
+  ]
+}

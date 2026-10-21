@@ -1,0 +1,16 @@
+{
+  "repository": "https://github.com/NVlabs/GR00T-WholeBodyControl",
+  "commit": "45c03facbf848e0c743091b7d9c17952096ff908",
+  "path": "gear_sonic/utils/data_collection/episode_state.py",
+  "sha256": "bee11b69f6876932d0a7a16476c2d5f75b9471a202d47c9c2fe0ea669465a4a8",
+  "changes": "none",
+  "recording_commands": {
+    "path": "gear_sonic/scripts/run_data_exporter.py",
+    "sha256": "9be05e9d03496a9e9c775349ab228e523146ef2d2f70f3a57244a3b5d0653bca",
+    "methods": [
+      "GrootDataCollector._check_recording_commands",
+      "GrootDataCollector._finalize_frame"
+    ],
+    "changes": "Methods unchanged; ROS transport adapter supplies data and button flags."
+  }
+}

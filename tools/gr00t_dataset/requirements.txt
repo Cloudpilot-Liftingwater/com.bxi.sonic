@@ -1,0 +1,15 @@
+# Official SONIC writer, isolated from ROS and GR00T training environments.
+# Install a matching CPU torch/torchvision pair first (see README).
+torch==2.6.0
+torchvision==0.21.0
+numpy==1.26.4
+datasets==3.6.0
+huggingface-hub>=0.34,<1
+av>=14.2,<18
+opencv-python>=4.8,<4.12
+pyarrow>=15,<25
+PyYAML>=6,<7
+lerobot @ git+https://github.com/huggingface/lerobot.git@a445d9c9da6bea99a8972daa4fe1fdd053d711d2
+# This is the LeRobot revision required by official gear_sonic[data_collection].
+
+tyro==0.9.17

@@ -1,0 +1,24 @@
+[Unit]
+Description=ELF3 PICO collection button listener (no robot control)
+After=network.target
+
+[Service]
+Type=simple
+User=bxi
+Group=bxi
+SupplementaryGroups=video
+UMask=0077
+WorkingDirectory=/home/bxi/sonic_pico_collection_20261012_r5
+ExecStart=/usr/bin/bash /home/bxi/sonic_pico_collection_20261012_r5/listen.sh --auto-grippers
+Restart=no
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=infinity
+SendSIGKILL=no
+NoNewPrivileges=yes
+Nice=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

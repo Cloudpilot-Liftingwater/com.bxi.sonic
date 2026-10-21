@@ -1,0 +1,20 @@
+{
+  "repository": "https://github.com/NVlabs/GR00T-WholeBodyControl",
+  "commit": "45c03facbf848e0c743091b7d9c17952096ff908",
+  "files": {
+    "gear_sonic/data/exporter.py": {
+      "upstream_sha256": "5ebabae815e2ce45a10674fd60bdcd97f9e948cb1c50517e5d851008a9be204c",
+      "url": "https://github.com/NVlabs/GR00T-WholeBodyControl/blob/45c03facbf848e0c743091b7d9c17952096ff908/gear_sonic/data/exporter.py"
+    },
+    "gear_sonic/data/video_writer.py": {
+      "upstream_sha256": "f4f18b22c222e8063cf3f61b480171b8ab49c68898ef7c76960ee2e12b45839e",
+      "url": "https://github.com/NVlabs/GR00T-WholeBodyControl/blob/45c03facbf848e0c743091b7d9c17952096ff908/gear_sonic/data/video_writer.py"
+    },
+    "gear_sonic/scripts/process_dataset.py": {
+      "upstream_sha256": "af9971ab4fd96e3821a3423974a406fdb8432e1b0b75f720c819ff4e3e5127cc",
+      "url": "https://github.com/NVlabs/GR00T-WholeBodyControl/blob/45c03facbf848e0c743091b7d9c17952096ff908/gear_sonic/scripts/process_dataset.py",
+      "changes": "none"
+    }
+  },
+  "lerobot_commit": "a445d9c9da6bea99a8972daa4fe1fdd053d711d2"
+}

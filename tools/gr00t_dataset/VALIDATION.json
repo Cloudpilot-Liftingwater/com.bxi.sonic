@@ -1,0 +1,110 @@
+{
+  "status": "PASS",
+  "checks": {
+    "two_save_two_discard_and_same_episode_pause": true,
+    "one_real_row_saved": true,
+    "empty_discard_does_not_crash": true,
+    "unchanged_video_bytes_and_dimensions": true,
+    "jitter_and_old_imu_not_deleted": true,
+    "official_stats_cache_fingerprints": true,
+    "official_zero_smpl_cleanup_same_episode": true,
+    "receipt_snapshot_and_duplicate_token": true,
+    "official_source_identity": true,
+    "official_gr00t_loader_40x66_and_motor_radian_roundtrip": true,
+    "legacy_export_and_writer_tests": 19,
+    "native_identity_migration_tests": 18,
+    "archived_ros_message_import": true,
+    "download_review_two_saved_two_discarded": true,
+    "upgrade_from_v12_and_v13": true
+  },
+  "root": "/data/tmp/official_v14_validation_i0_bob7h",
+  "export": {
+    "status": "TRAINING_DATASET_READY",
+    "dataset": "/data/tmp/official_v14_validation_i0_bob7h/export",
+    "frames": 120,
+    "training_sequences": 2,
+    "training_ready": true,
+    "short_episode_indices": [],
+    "official_loader_run": false,
+    "cleanup": [
+      {
+        "source": "/data/tmp/official_v14_validation_i0_bob7h/data/session_nadsz7kn/episode_0000/lerobot",
+        "total_episodes": 1,
+        "episodes_with_stale": 0,
+        "total_frames": 60,
+        "frames_removed": 0,
+        "zero_frames": 0,
+        "frozen_leadin_frames": 0,
+        "episodes_dropped": 0,
+        "episodes_discarded": 0
+      },
+      {
+        "source": "/data/tmp/official_v14_validation_i0_bob7h/data/session_egwliiuk/episode_0000/lerobot",
+        "total_episodes": 1,
+        "episodes_with_stale": 0,
+        "total_frames": 60,
+        "frames_removed": 0,
+        "zero_frames": 0,
+        "frozen_leadin_frames": 0,
+        "episodes_dropped": 0,
+        "episodes_discarded": 0
+      },
+      {
+        "source": "/data/tmp/official_v14_validation_i0_bob7h/data/session_3wg7mnty/episode_0000/lerobot",
+        "total_episodes": 1,
+        "episodes_with_stale": 0,
+        "total_frames": 0,
+        "frames_removed": 0,
+        "zero_frames": 0,
+        "frozen_leadin_frames": 0,
+        "episodes_dropped": 0,
+        "episodes_discarded": 1
+      },
+      {
+        "source": "/data/tmp/official_v14_validation_i0_bob7h/data/session_i57xour3/episode_0000/lerobot",
+        "total_episodes": 1,
+        "episodes_with_stale": 0,
+        "total_frames": 0,
+        "frames_removed": 0,
+        "zero_frames": 0,
+        "frozen_leadin_frames": 0,
+        "episodes_dropped": 0,
+        "episodes_discarded": 1
+      }
+    ],
+    "hardware_commands_sent": 0
+  },
+  "hardware_commands_sent": 0,
+  "limitation": "Synthetic offline replay; no robot or trained model executed",
+  "not_run": [
+    "robot deployment",
+    "robot camera/SONIC live capture",
+    "model finetuning",
+    "trained model open-loop inference"
+  ],
+  "hd_replay": {
+    "rows": 600,
+    "target_hz": 50,
+    "elapsed_s": 11.981048197994824,
+    "actual_hz": 50.07909075104275,
+    "max_add_ms": 19.15357400139328,
+    "save_seconds": 0.33736812400456984,
+    "readback": {
+      "category": "SAVED_PASS",
+      "num_frames": 600,
+      "readback": "PASS",
+      "decoded_video_frames": 1800,
+      "events": [],
+      "pause_resume_verified": false,
+      "outcome": "saved",
+      "collector_release": "20261021-collection-14-official-session",
+      "median_source_hz": 50.00000000000995,
+      "measured_motor_units": "rad",
+      "commanded_motor_units": "rad"
+    },
+    "hardware_commands": 0,
+    "scope": "workstation CPU replay of real RGB texture, synthetic numerics; not robot validation",
+    "directory": "/data/tmp/official_v14_HD_replay_ft9jsyb7"
+  },
+  "delivery_check_local_files": 453
+}

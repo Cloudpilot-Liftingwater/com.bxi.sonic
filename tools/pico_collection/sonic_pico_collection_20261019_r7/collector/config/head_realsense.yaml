@@ -1,0 +1,18 @@
+/depth_camera_manager:
+  ros__parameters:
+    camera_namespace: hardware
+    single_camera_name: head_depth_camera
+    enable_depth: true
+    enable_color: true
+    enable_infra1: false
+    enable_infra2: false
+    enable_gyro: false
+    enable_accel: false
+    align_depth.enable: true
+    depth_module.depth_profile: "640,480,30"
+    depth_module.rectification.enable: false
+    rgb_camera.color_profile: "640,480,30"
+    rgb_camera.rectification.enable: false
+    cameras:
+      head_depth_camera:
+        serial_no: "261222075031"

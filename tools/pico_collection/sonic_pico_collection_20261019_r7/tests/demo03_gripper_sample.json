@@ -1,0 +1,72 @@
+{
+  "synthetic_only": true,
+  "producer_sha256": "906d6279b1f4c541861e1e897f6c81f8e637b71d090b0f814c051ee85eab3aa3",
+  "sample": {
+    "schema": 1,
+    "monotonic": 9.995,
+    "training_eligible": true,
+    "ineligible_reasons": [],
+    "control_monotonic": 9.991,
+    "coordinate": "raw_motor_rad_and_soft_limit_closure_fraction",
+    "samples": [
+      {
+        "side": "left",
+        "bus": 6,
+        "motor_id": 1,
+        "protocol": "bxi",
+        "profile": "bxi_colleague_rad_v1",
+        "position_unit": "rad",
+        "effort_unit": "Nm",
+        "position_rad": 1.0471975511965976,
+        "velocity_rad_s": 0.1,
+        "torque_nm": 0.2,
+        "feedback_monotonic": 9.985,
+        "open_rad": 5.235987755982989,
+        "closed_rad": 0.0,
+        "closure_fraction": 0.8,
+        "command_closure_fraction": 0.8166666666666668,
+        "trigger": 0.8,
+        "trigger_monotonic": 9.985,
+        "control": {
+          "active": true,
+          "mode": "tracking"
+        },
+        "command": {
+          "position": 0.9599310885968813,
+          "sent_monotonic": 9.992999999999999
+        }
+      },
+      {
+        "side": "right",
+        "bus": 5,
+        "motor_id": 1,
+        "protocol": "bxi",
+        "profile": "bxi_colleague_rad_v1",
+        "position_unit": "rad",
+        "effort_unit": "Nm",
+        "position_rad": 4.1887902047863905,
+        "velocity_rad_s": 0.1,
+        "torque_nm": 0.2,
+        "feedback_monotonic": 9.985,
+        "open_rad": 5.235987755982989,
+        "closed_rad": 0.0,
+        "closure_fraction": 0.2000000000000001,
+        "command_closure_fraction": 0.1833333333333333,
+        "trigger": 0.2,
+        "trigger_monotonic": 9.985,
+        "control": {
+          "active": true,
+          "mode": "tracking"
+        },
+        "command": {
+          "position": 4.276056667386108,
+          "sent_monotonic": 9.992999999999999
+        }
+      }
+    ],
+    "stamp": {
+      "sec": 99,
+      "nanosec": 995000000
+    }
+  }
+}

@@ -1,0 +1,117 @@
+{
+  "release": "20261020-customer-official-writer-07",
+  "source_collector_release": "20261020-collection-09-jpeg-cache",
+  "official_writer_commit": "e3018c79f1a0c92b254470db312c25d08794806d",
+  "lerobot_commit": "a445d9c9da6bea99a8972daa4fe1fdd053d711d2",
+  "tests": {
+    "writer_adapter_passed": 15,
+    "portability_passed": 5,
+    "lerobot_sdk_readback": true,
+    "video_flush_and_error_tests": true
+  },
+  "paused_task_export": {
+    "status": "TRAINING_DATASET_READY",
+    "dataset": "/data/tmp/sonic_official_writer_20261020/synthetic_training",
+    "frames": 120,
+    "training_sequences": 2,
+    "logical_recordings": 1,
+    "excluded_raw_rows": 0,
+    "official_loader_run": false,
+    "hardware_commands_sent": 0,
+    "storage_backend": "NVIDIA_SONIC_Gr00tDataExporter",
+    "decoded_video_frames": 360
+  },
+  "paused_task_gr00t_loader": {
+    "status": "EXISTING_ELF3_NATIVE_DATA_PATH_PASS",
+    "embodiment_tag": "elf3_native_1d",
+    "projector_slot": 14,
+    "gr00t_source": [
+      "/data/ros2_ws/Isaac-GR00T/gr00t"
+    ],
+    "episodes": 2,
+    "decoded_video_frames": 360,
+    "rows": 120,
+    "state_shape": [
+      1,
+      34
+    ],
+    "action_shape": [
+      40,
+      66
+    ],
+    "views": 3,
+    "test_scope": "official loader + CPU video decoding + statistics + training sampling + normalization",
+    "sampler_steps": 42,
+    "motor_radian_normalization_roundtrip": true,
+    "pretrained_processor_run": false,
+    "finetuning_run": false,
+    "hardware_test": false
+  },
+  "camera30_export": {
+    "status": "TRAINING_DATASET_READY",
+    "dataset": "/data/tmp/sonic_official_writer_20261020/camera30_training",
+    "frames": 120,
+    "training_sequences": 1,
+    "logical_recordings": 1,
+    "excluded_raw_rows": 0,
+    "official_loader_run": false,
+    "hardware_commands_sent": 0,
+    "storage_backend": "NVIDIA_SONIC_Gr00tDataExporter",
+    "decoded_video_frames": 360
+  },
+  "camera30_gr00t_loader": {
+    "status": "EXISTING_ELF3_NATIVE_DATA_PATH_PASS",
+    "embodiment_tag": "elf3_native_1d",
+    "projector_slot": 14,
+    "gr00t_source": [
+      "/data/ros2_ws/Isaac-GR00T/gr00t"
+    ],
+    "episodes": 1,
+    "decoded_video_frames": 360,
+    "rows": 120,
+    "state_shape": [
+      1,
+      34
+    ],
+    "action_shape": [
+      40,
+      66
+    ],
+    "views": 3,
+    "test_scope": "official loader + CPU video decoding + statistics + training sampling + normalization",
+    "sampler_steps": 81,
+    "motor_radian_normalization_roundtrip": true,
+    "pretrained_processor_run": false,
+    "finetuning_run": false,
+    "hardware_test": false
+  },
+  "robot_access": false,
+  "robot_mutations": 0,
+  "hardware_test": false,
+  "training_run": false,
+  "collector_tree_unchanged": true,
+  "training_config_unchanged": true,
+  "runtime_control_unchanged": {
+    "policy.py": "235dee9d8c84f92f113459ea996db4f458d1268544fb3b1800e9b81d07df154b",
+    "state.py": "1adb09b56d0e59df0105d6c3e78f5ea6386d9fddaba4d9060f8e41b9150df3df",
+    "plugin.py": "f7ff34afcfdd54d93d92f5fd0e217205905490399b55024e2f0cad4471464657",
+    "mod.yaml": "cdf7302bc92d33b2b0d1fc5342e35feba92657b1f0e58966768aae9a0f718566",
+    "gripper.py": "9201364bf26d8d26dfd6fbb278f8708a501087176d85a463b0b1d432b401927b",
+    "bxi_demo.py": "37d5432f617955ccc42545708ff2634844492e857e90ca70f4d6eeec630b19a8",
+    "bxi_demo_native.so": "7123406190d91131a279265440c0630432a1158475305f3399610a81af5665fc",
+    "collection_telemetry.py": "906d6279b1f4c541861e1e897f6c81f8e637b71d090b0f814c051ee85eab3aa3",
+    "tracking_tap.py": "93f856aa1e5ed2c521f6f13ddfbe8b39b73141c09950326c0aa8d97772311b14",
+    "assets/sonic_action_token.onnx": "50303783f72ca61674b54987cab20abd11d0ced25c7042062fb03ef6355cdfdf",
+    "pico/pose_to_smpl_ref_bridge.py": "a0d844f5f78e30c9483e327ec46e9187ef5ba31263aaf43bd51ffcd5aa1f5687",
+    "pico/streamed_smpl_ref.py": "a194717341e9e9822c1b52100bd1ba0ec34f00450c5bf35aa35138108dd91691",
+    "tools/pico_collection/sonic_pico_collection_20261019_r7/session_node.py": "66f4cd775e70ce66be360b026739a0f937573291b5728fc744e4c488307b93c4",
+    "tools/pico_collection/sonic_pico_collection_20261019_r7/session_protocol.py": "0b125d9267d0464e74f52b2d7209f784030134e5da690119e5b63cc67e37c7a0"
+  },
+  "automatic_training_export": false,
+  "pipeline": "existing ELF3 ROS/raw capture -> official SONIC writer -> official GR00T statistics",
+  "limitations": [
+    "Synthetic software tests, field camera/task acceptance pending",
+    "Raw capture remains JPEG/JSONL; training dataset is exported on workstation after save",
+    "Official G1/ZMQ entry is not deployed on ELF3"
+  ]
+}

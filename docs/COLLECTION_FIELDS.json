@@ -1,0 +1,235 @@
+{
+  "schema": "elf3_three_rgb_gripper_source/v2",
+  "top_level_fields": [
+    {
+      "key": "diagnostic_only",
+      "python_lookup": "row['diagnostic_only']",
+      "shape_or_type": "bool",
+      "description": "当前固定true，尚非训练坐标合同"
+    },
+    {
+      "key": "idx",
+      "python_lookup": "row['idx']",
+      "shape_or_type": "int",
+      "description": "本episode保存行号，从0开始"
+    },
+    {
+      "key": "t_episode",
+      "python_lookup": "row['t_episode']",
+      "shape_or_type": "float",
+      "description": "本行头图源时间减首行头图源时间，秒，包含暂停间隔"
+    },
+    {
+      "key": "t_wall_episode",
+      "python_lookup": "row['t_wall_episode']",
+      "shape_or_type": "float",
+      "description": "写入时刻相对录制开始的墙钟时间，秒"
+    },
+    {
+      "key": "t_unix",
+      "python_lookup": "row['t_unix']",
+      "shape_or_type": "float",
+      "description": "组装本行的Unix时间，秒；不是相机曝光时刻"
+    },
+    {
+      "key": "anchor_sequence",
+      "python_lookup": "row['anchor_sequence']",
+      "shape_or_type": "int",
+      "description": "头部图像接收序号，可能不连续"
+    },
+    {
+      "key": "observation.state",
+      "python_lookup": "row['observation.state']",
+      "shape_or_type": "float[31]",
+      "description": "实测关节位置，rad，身体29＋头部2"
+    },
+    {
+      "key": "observation.velocity",
+      "python_lookup": "row['observation.velocity']",
+      "shape_or_type": "float[31]",
+      "description": "实测关节速度，rad/s"
+    },
+    {
+      "key": "observation.effort",
+      "python_lookup": "row['observation.effort']",
+      "shape_or_type": "float[31]",
+      "description": "硬件消息报告的关节力度；保留驱动语义，未做独立力矩标定"
+    },
+    {
+      "key": "observation.driver_temperature",
+      "python_lookup": "row['observation.driver_temperature']",
+      "shape_or_type": "float[31]",
+      "description": "驱动温度，°C；结合对应present掩码"
+    },
+    {
+      "key": "observation.motor_temperature",
+      "python_lookup": "row['observation.motor_temperature']",
+      "shape_or_type": "float[31]",
+      "description": "电机温度，°C；结合对应present掩码"
+    },
+    {
+      "key": "observation.joint_present",
+      "python_lookup": "row['observation.joint_present']",
+      "shape_or_type": "bool[31]",
+      "description": "本行该关节是否确实存在"
+    },
+    {
+      "key": "observation.driver_temperature_present",
+      "python_lookup": "row['observation.driver_temperature_present']",
+      "shape_or_type": "bool[31]",
+      "description": "驱动温度是否真实提供"
+    },
+    {
+      "key": "observation.motor_temperature_present",
+      "python_lookup": "row['observation.motor_temperature_present']",
+      "shape_or_type": "bool[31]",
+      "description": "电机温度是否真实提供"
+    },
+    {
+      "key": "observation.projected_gravity",
+      "python_lookup": "row['observation.projected_gravity']",
+      "shape_or_type": "float[3]",
+      "description": "按SONIC身体/IMU约定计算的重力方向，单位向量"
+    },
+    {
+      "key": "dataset.observation.state",
+      "python_lookup": "row['dataset.observation.state']",
+      "shape_or_type": "null",
+      "description": "当前没有验证过的训练坐标映射，故不填"
+    },
+    {
+      "key": "observation.imu",
+      "python_lookup": "row['observation.imu']",
+      "shape_or_type": "object",
+      "description": "见下文IMU字段"
+    },
+    {
+      "key": "action",
+      "python_lookup": "row['action']",
+      "shape_or_type": "float[31]",
+      "description": "最终 ActuatorCmds 位置指令，rad；不是实测角"
+    },
+    {
+      "key": "action.velocity",
+      "python_lookup": "row['action.velocity']",
+      "shape_or_type": "float[31]",
+      "description": "最终速度指令，rad/s"
+    },
+    {
+      "key": "action.torque",
+      "python_lookup": "row['action.torque']",
+      "shape_or_type": "float[31]",
+      "description": "最终前馈力度，沿用硬件接口单位"
+    },
+    {
+      "key": "action.kp",
+      "python_lookup": "row['action.kp']",
+      "shape_or_type": "各float[31]",
+      "description": "最终位置/速度增益，沿用控制接口定义"
+    },
+    {
+      "key": "action.kd",
+      "python_lookup": "row['action.kd']",
+      "shape_or_type": "各float[31]",
+      "description": "最终位置/速度增益，沿用控制接口定义"
+    },
+    {
+      "key": "action.joint_present",
+      "python_lookup": "row['action.joint_present']",
+      "shape_or_type": "bool[31]",
+      "description": "指令中是否含该关节"
+    },
+    {
+      "key": "dataset.action.wbc",
+      "python_lookup": "row['dataset.action.wbc']",
+      "shape_or_type": "null",
+      "description": "同上，尚未填训练坐标"
+    },
+    {
+      "key": "action.motion_token",
+      "python_lookup": "row['action.motion_token']",
+      "shape_or_type": "float[64]",
+      "description": "**同一次在线推理**产生的post-FSQ decoder输入；不是29维关节指令"
+    },
+    {
+      "key": "sonic.inference",
+      "python_lookup": "row['sonic.inference']",
+      "shape_or_type": "object",
+      "description": "模型指纹、序号、状态及推理目标，见下文"
+    },
+    {
+      "key": "sonic.effective_continuous_action_29",
+      "python_lookup": "row['sonic.effective_continuous_action_29']",
+      "shape_or_type": "float[29]",
+      "description": "`(最终身体指令-default_position)/action_scale`反算连续动作，非motion_token"
+    },
+    {
+      "key": "sonic.effective_continuous_action_history_10x29",
+      "python_lookup": "row['sonic.effective_continuous_action_history_10x29']",
+      "shape_or_type": "float[10][29]",
+      "description": "上述连续动作的10步历史；不是SMPL未来帧窗口"
+    },
+    {
+      "key": "pico.raw",
+      "python_lookup": "row['pico.raw']",
+      "shape_or_type": "object",
+      "description": "对齐到本行的PICO网络包，字段见下文"
+    },
+    {
+      "key": "pico.smpl_ref",
+      "python_lookup": "row['pico.smpl_ref']",
+      "shape_or_type": "object",
+      "description": "对齐到PICO帧号的SMPL参考网络包，字段见下文"
+    },
+    {
+      "key": "state_machine",
+      "python_lookup": "row['state_machine']",
+      "shape_or_type": "object",
+      "description": "源状态机JSON原样保存；当前状态在`current.name`，其他字段随宿主版本变化"
+    },
+    {
+      "key": "motion_command",
+      "python_lookup": "row['motion_command']",
+      "shape_or_type": "null",
+      "description": "当前SourceCollectionNode没有填此项"
+    },
+    {
+      "key": "auxiliary",
+      "python_lookup": "row['auxiliary']",
+      "shape_or_type": "object",
+      "description": "对齐、时钟、片段及选择证据，见下文"
+    },
+    {
+      "key": "gripper",
+      "python_lookup": "row['gripper']",
+      "shape_or_type": "object",
+      "description": "两爪实测/最终指令及原始遥测，见下文"
+    },
+    {
+      "key": "observation.images",
+      "python_lookup": "row['observation.images']",
+      "shape_or_type": "object",
+      "description": "`head_rgb`、`left_wrist_rgb`、`right_wrist_rgb`三个相对JPEG路径"
+    },
+    {
+      "key": "observation.depth",
+      "python_lookup": "row['observation.depth']",
+      "shape_or_type": "null",
+      "description": "当前不记录深度"
+    },
+    {
+      "key": "source_timestamps_unix",
+      "python_lookup": "row['source_timestamps_unix']",
+      "shape_or_type": "object",
+      "description": "各源Unix时间（秒），见下文"
+    },
+    {
+      "key": "source_receive_offsets_s",
+      "python_lookup": "row['source_receive_offsets_s']",
+      "shape_or_type": "object",
+      "description": "各源接收时间相对头图锚点的差值（秒）"
+    }
+  ],
+  "details": "COLLECTION_DATA_FORMAT.md",
+  "source": "tools/pico_collection/sonic_pico_collection_20261019_r7/collector/real_robot_collection/recorder.py"
+}
