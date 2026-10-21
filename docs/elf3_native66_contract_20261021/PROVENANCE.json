@@ -1,0 +1,31 @@
+{
+  "source_files": {
+    "elf3_native_1d_abi.json": {
+      "repository_path": "tools/gr00t_dataset/elf3_native_1d_abi.json",
+      "sha256": "dc008f4bcefa8899aedfb79a0fc6ac23e8380cbddc13354ef150455b66ffafee"
+    },
+    "modality.json": {
+      "repository_path": "tools/gr00t_dataset/modality.json",
+      "sha256": "f63cdc5b3d699ef3c0e52a86464cbc2b4f6fe3a12cd29ec7f6740175ab2350d3"
+    },
+    "elf3_native_1d_config.py": {
+      "repository_path": "tools/gr00t_dataset/elf3_native_1d_config.py",
+      "sha256": "b45ee66dfc69622414c1913f44b5e7596c3bba963ea6548971fb90d26aaf0187"
+    },
+    "contract.py": {
+      "repository_path": "tools/gr00t_dataset/contract.py",
+      "sha256": "d49ad088e31e54073ec4dadf36fceb2eac5891b6930de3c28feb5cdfae28750c"
+    },
+    "validate_official.py": {
+      "repository_path": "tools/gr00t_dataset/validate_official.py",
+      "sha256": "dec3c2d6a0c658f9bb7062710f6bfffea1f625ee1d6429ced52912d0726a6333"
+    }
+  },
+  "official_sonic_writer_commit": "e3018c79f1a0c92b254470db312c25d08794806d",
+  "example_files": "synthetic paused source -> 1 training episode / 120 rows; examples only, not field demonstrations",
+  "export_policy_source": {
+    "repository_path": "tools/gr00t_dataset/export_dataset.py",
+    "release": "20261021-export-02-joined-episode",
+    "sha256": "2d3e8ff632e89d76e3fd6920d2c9c847fea3959e53afa64148d1a294a632e14c"
+  }
+}

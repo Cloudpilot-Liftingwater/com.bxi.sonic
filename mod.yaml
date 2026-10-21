@@ -1,31 +1,29 @@
 schema: 1
 id: com.bxi.sonic
 name: SONIC遥操
-version: 1.3.1
-api: ">=4,<5"
+version: 1.5.0
+api: '>=4,<5'
 enable: true
 entrypoint: plugin:create_mod
 visibility: public
 requires:
-  - id: com.bxi.basic_actions
-    version: ">=1,<2"
+- id: com.bxi.basic_actions
+  version: '>=1,<2'
 conflicts: []
 python_exports: []
 runtime_requirements:
   python:
-    - import: zmq
+  - import: zmq
   ros:
-    - package: rclpy
-    - package: communication
-    - package: std_msgs
+  - package: rclpy
+  - package: communication
+  - package: std_msgs
   system: []
-
 runtime_profiles:
   pico_bootstrap:
     mode: host
   host_ros:
     mode: host
-
 nodes:
   mediamtx_server:
     runtime: command
@@ -35,12 +33,12 @@ nodes:
     execution: process
     lifecycle: state
     states:
-      - sonic_teleop
+    - sonic_teleop
     arguments:
-      - --config
-      - runtime/mediamtx.yml
+    - --config
+    - runtime/mediamtx.yml
     environment:
-      PYTHONUNBUFFERED: "1"
+      PYTHONUNBUFFERED: '1'
     scheduling:
       cpu_affinity: background
     manifest:
@@ -52,12 +50,13 @@ nodes:
     restart:
       max_attempts: 3
       delay: 1.0
-      non_retryable_exit_codes: [64, 78]
+      non_retryable_exit_codes:
+      - 64
+      - 78
     shutdown:
       signal: SIGINT
       terminate_after: 2.0
       kill_after: 4.0
-
   head_camera_rtsp:
     runtime: executable
     entrypoint: head_camera_rtsp_node
@@ -65,9 +64,9 @@ nodes:
     execution: process
     lifecycle: state
     states:
-      - sonic_teleop
+    - sonic_teleop
     depends_on:
-      - mediamtx_server
+    - mediamtx_server
     scheduling:
       cpu_affinity: background
     params:
@@ -93,23 +92,24 @@ nodes:
     runtime_requirements:
       python: []
       ros:
-        - package: rclcpp
-        - package: sensor_msgs
+      - package: rclcpp
+      - package: sensor_msgs
       system:
-        - library: avcodec
-        - library: avformat
-        - library: avutil
-        - library: swscale
-        - library: x264
+      - library: avcodec
+      - library: avformat
+      - library: avutil
+      - library: swscale
+      - library: x264
     restart:
       max_attempts: 3
       delay: 1.0
-      non_retryable_exit_codes: [64, 78]
+      non_retryable_exit_codes:
+      - 64
+      - 78
     shutdown:
       signal: SIGINT
       terminate_after: 3.0
       kill_after: 5.0
-
   pico_manager:
     runtime: command
     entrypoint: pico/manager_launcher.py
@@ -118,15 +118,15 @@ nodes:
     execution: process
     lifecycle: state
     states:
-      - sonic_teleop
+    - sonic_teleop
     arguments:
-      - --manager
-      - --num_frames_to_send
-      - "10"
-      - --target_fps
-      - "50"
+    - --manager
+    - --num_frames_to_send
+    - '10'
+    - --target_fps
+    - '50'
     environment:
-      PYTHONUNBUFFERED: "1"
+      PYTHONUNBUFFERED: '1'
     manifest:
       label: SONIC PICO管理器
     runtime_requirements:
@@ -136,12 +136,12 @@ nodes:
     restart:
       max_attempts: 3
       delay: 3.0
-      non_retryable_exit_codes: [78]
+      non_retryable_exit_codes:
+      - 78
     shutdown:
       signal: SIGINT
       terminate_after: 3.0
       kill_after: 5.0
-
   smpl_bridge:
     runtime: python
     entrypoint: pico.pose_to_smpl_ref_bridge:create_node
@@ -149,9 +149,9 @@ nodes:
     runtime_profile: host_ros
     lifecycle: state
     states:
-      - sonic_teleop
+    - sonic_teleop
     depends_on:
-      - pico_manager
+    - pico_manager
     params:
       pico_host: 127.0.0.1
       pico_port: 5556
@@ -165,89 +165,18 @@ nodes:
       label: SONIC SMPL参考桥
     runtime_requirements:
       python:
-        - import: zmq
+      - import: zmq
       ros:
-        - package: rclpy
-        - package: std_msgs
+      - package: rclpy
+      - package: std_msgs
       system: []
-
-  zerolab_source:
-    runtime: python
-    entrypoint: zerolab.source_node:create_node
-    execution: process
-    runtime_profile: host_ros
-    lifecycle: state
-    states: [sonic_zerolab]
-    params:
-      udp_bind_host: 0.0.0.0
-      udp_port: 18000
-      allowed_sender: 192.168.89.171
-      pose_host: 127.0.0.1
-      pose_port: 5558
-      pose_topic: pose
-      rate_hz: 50.0
-      window_frames: 10
-      stale_seconds: 0.5
-      jitter_buffer_seconds: 0.04
-      short_recovery_blend_seconds: 0.2
-      recovery_real_frames: 10
-      record_path: ""
-    manifest:
-      label: ZeroLab姿态源
-    runtime_requirements:
-      python:
-        - import: numpy
-        - import: scipy
-        - import: zmq
-      ros:
-        - package: rclpy
-      system: []
-    shutdown:
-      signal: SIGINT
-      terminate_after: 3.0
-      kill_after: 5.0
-
-  zerolab_bridge:
-    runtime: python
-    entrypoint: pico.pose_to_smpl_ref_bridge:create_node
-    execution: in_process
-    runtime_profile: host_ros
-    lifecycle: state
-    states: [sonic_zerolab]
-    depends_on: [zerolab_source]
-    params:
-      pico_host: 127.0.0.1
-      pico_port: 5558
-      pico_topic: pose
-      out_host: 127.0.0.1
-      out_port: 5557
-      out_topic: smpl_ref
-      rate_hz: 50.0
-      stale_warning_seconds: 0.5
-    manifest:
-      label: ZeroLab SMPL参考桥
-    runtime_requirements:
-      python:
-        - import: zmq
-      ros:
-        - package: rclpy
-        - package: std_msgs
-      system: []
-
 events:
   activate:
     slot: btn_10
     value: 9
-  activate_zerolab:
-    slot: btn_10
-    value: 11
-  arm_zerolab:
-    slot: btn_10
-    value: 12
   reset_alignment:
     slot: btn_9
     value: 1
-
 states:
   sonic_teleop:
     manifest:
@@ -256,9 +185,7 @@ states:
       group: Advanced
       icon: sports_esports
       confirm: true
-      confirm_message: >-
-        使用前务必查看官方WIKI，进入后先保持idle站立；若启用夹爪，请先松开左右trigger并确认周围安全；
-        当前IP：${bxi.system.ip}
+      confirm_message: 使用前务必查看官方WIKI，进入后先保持idle站立；若启用夹爪，请先松开左右trigger并确认周围安全； 当前IP：${bxi.system.ip}
     params:
       require_live_reference: false
       yaw_bias_rad: 1.57079632679
@@ -271,22 +198,77 @@ states:
       head_pitch_speed_rad_s: 1.5
       head_yaw_speed_rad_s: 2.0
       head_deadband_rad: 0.015
-      hardware_gripper: true
+      gripper_backend: bxi_demo
+      gripper_discovery_only: true
+      gripper_enable_on_discovery: false
+      gripper_dm_scan: false
+      gripper_dm_scan_max_id: 15
+      gripper_dm_auto_master_id: false
+      gripper_left_dm_can_id: 1
+      gripper_right_dm_can_id: 4
+      gripper_left_dm_master_id: 257
+      gripper_right_dm_master_id: 20
+      gripper_left_dm_frame_flags: 0
+      gripper_right_dm_frame_flags: 0
+      gripper_motion_enabled: false
+      gripper_auto_calibrate: false
+      gripper_left_open_position_rad: 0.0
+      gripper_left_closed_position_rad: 0.0
+      gripper_right_open_position_rad: 0.0
+      gripper_right_closed_position_rad: 0.0
+      gripper_target_speed_rad_s: 4.0
+      gripper_trigger_timeout_s: 0.25
+      gripper_pause_with_live_reference: false
+      gripper_motion_torque_limit_nm: 4.0
+      gripper_motion_stall_timeout_s: 1.5
+      gripper_feedback_jump_limit_rad: 1.0
+      gripper_dm_ranges_verified: true
+      gripper_dm_mit_mode_verified: true
       gripper_enable_interval_s: 1.0
+      gripper_detection_interval_s: 0.25
+      gripper_detection_timeout_s: 10.0
       gripper_left_bus: 5
+      gripper_left_protocol: dm
       gripper_right_bus: 6
-      gripper_can_id: 1
-      gripper_master_id: 17
-      gripper_skip_motor_id_check: false
-      gripper_kp: 3.0
-      gripper_kd: 1.0
-      gripper_calibration_speed_rad_s: 2.0
+      gripper_right_protocol: dm
+      gripper_dm_can_id: 4
+      gripper_dm_master_id: 20
+      gripper_dm_frame_flags: 0
+      gripper_dm_position_max_rad: 12.5
+      gripper_dm_velocity_max_rad_s: 10.0
+      gripper_dm_torque_max_nm: 12.0
+      gripper_kp: 40.0
+      gripper_kd: 3.0
+      gripper_calibration_speed_rad_s: 0.2
       gripper_calibration_kp: 5.0
       gripper_calibration_kd: 0.5
-      gripper_contact_torque: 0.5
-      gripper_abort_torque: 2.5
+      gripper_calibration_return_acceleration_rad_s2: 2.0
+      gripper_calibration_return_speed_rad_s: 0.8
+      gripper_exit_close_acceleration_rad_s2: 3.0
+      gripper_motion_maximum_feedback_velocity_rad_s: 5.0
+      gripper_motion_velocity_feedforward: true
+      gripper_motion_braking_acceleration_rad_s2: 10.0
+      gripper_motion_acceleration_rad_s2: 20.0
+      gripper_motion_soft_torque_nm: 3.0
+      gripper_motion_contact_torque_nm: 1.8
+      gripper_hold_torque_nm: 2.0
+      gripper_motion_command_torque_nm: 2.5
+      gripper_exit_close_timeout_s: 45.0
+      gripper_exit_close_speed_rad_s: 0.8
+      gripper_close_on_normal_exit: true
+      gripper_initial_release_rad: 0.2
+      gripper_initial_release_enabled: true
+      gripper_feedforward_slew_nm_s: 1.5
+      gripper_feedforward_max_nm: 2.2
+      gripper_right_open_direction: 1
+      gripper_left_open_direction: 1
+      gripper_minimum_seek_travel_rad: 0.1
+      gripper_calibration_stall_timeout_s: 3.0
+      gripper_calibration_command_torque_limit_nm: 2.5
+      gripper_contact_torque: 2.0
+      gripper_abort_torque: 8.0
       gripper_contact_confirm_s: 0.25
-      gripper_stopped_velocity_rad_s: 0.5
+      gripper_stopped_velocity_rad_s: 0.1
       gripper_tracking_error_rad: 0.08
       gripper_limit_margin_rad: 0.15
       gripper_minimum_span_rad: 1.0
@@ -294,81 +276,33 @@ states:
       gripper_response_timeout_s: 1.0
       gripper_feedback_timeout_s: 0.3
       gripper_phase_timeout_s: 50.0
-      gripper_maximum_mos_temperature_c: 120
-      gripper_maximum_motor_temperature_c: 120
-
-  sonic_zerolab:
-    manifest:
-      label: SONIC ZeroLab遥操
-      priority: 839
-      group: Advanced
-      icon: accessibility_new
-      confirm: true
-      confirm_message: >-
-        请先在ZeroLab厂家软件完成N-pose标定并回到中立姿势；进入后等待ZeroLab stream ready
-    params:
-      operator_prompt: >-
-        机器人保持实时Normal直到stream ready；确认操作者处于中立姿势后，由安全员发送btn_10=12接管；再次发送可暂停并回到WAIT_ARM
-      arm_blend_seconds: 2.0
-      auto_rearm_on_recovery: true
-      auto_rearm_blend_seconds: 2.0
-      recovery_real_frames: 10
-      require_live_reference: false
-      yaw_bias_rad: 1.57079632679
-      live_reference_timeout_s: 0.5
-      idle_frame_start: 3509
-      source_blend_seconds: 0.4
-      head_control_enabled: false
-      hardware_gripper: false
-
+      gripper_maximum_mos_temperature_c: 80
+      gripper_maximum_motor_temperature_c: 80
+      gripper_maximum_feedback_velocity_rad_s: 2.0
+      hardware_gripper: true
 routes:
-  - from: com.bxi.basic_actions/normal
-    event: activate
-    to: sonic_teleop
-    transition: soft_switch
-  - from: sonic_teleop
-    event: com.bxi.basic_actions/normal
-    to: com.bxi.basic_actions/normal
-    transition: soft_switch
-  - from: sonic_teleop
-    event: com.bxi.basic_actions/zero_torque
-    to: com.bxi.basic_actions/zero_torque
-  - from: sonic_teleop
-    event: com.bxi.basic_actions/pd_brake
-    to: com.bxi.basic_actions/pd_brake
-  - from: sonic_teleop
-    event: com.bxi.basic_actions/recover
-    to: com.bxi.basic_actions/recover
-    transition: soft_switch
-  - from: com.bxi.basic_actions/normal
-    event: activate_zerolab
-    to: sonic_zerolab
-    transition: soft_switch
-  - from: sonic_zerolab
-    event: com.bxi.basic_actions/normal
-    to: com.bxi.basic_actions/normal
-    transition: soft_switch
-  - from: sonic_zerolab
-    event: com.bxi.basic_actions/zero_torque
-    to: com.bxi.basic_actions/zero_torque
-  - from: sonic_zerolab
-    event: com.bxi.basic_actions/pd_brake
-    to: com.bxi.basic_actions/pd_brake
-  - from: sonic_zerolab
-    event: com.bxi.basic_actions/recover
-    to: com.bxi.basic_actions/recover
-    transition: soft_switch
-
+- from: com.bxi.basic_actions/normal
+  event: activate
+  to: sonic_teleop
+  transition: soft_switch
+- from: sonic_teleop
+  event: com.bxi.basic_actions/normal
+  to: com.bxi.basic_actions/normal
+  transition: soft_switch
+- from: sonic_teleop
+  event: com.bxi.basic_actions/zero_torque
+  to: com.bxi.basic_actions/zero_torque
+- from: sonic_teleop
+  event: com.bxi.basic_actions/pd_brake
+  to: com.bxi.basic_actions/pd_brake
+- from: sonic_teleop
+  event: com.bxi.basic_actions/recover
+  to: com.bxi.basic_actions/recover
+  transition: soft_switch
 actions:
-  - from: sonic_teleop
-    event: reset_alignment
-    action: reset_alignment
-    manifest:
-      label: 重置朝向对齐
-      ui: refresh
-  - from: sonic_zerolab
-    event: arm_zerolab
-    action: arm_zerolab
-    manifest:
-      label: ZeroLab ARM / 暂停
-      ui: shield
+- from: sonic_teleop
+  event: reset_alignment
+  action: reset_alignment
+  manifest:
+    label: 重置朝向对齐
+    ui: refresh

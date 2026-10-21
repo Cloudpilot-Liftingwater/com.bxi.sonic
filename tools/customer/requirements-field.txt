@@ -1,0 +1,10 @@
+# Relevant newer installed distributions in the test-01 archive, Python 3.10.
+# Not a full ROS/environment lock; explicit install only in the intended environment.
+numpy==1.26.4
+scipy==1.15.3
+pin==2.7.0
+onnxruntime==1.23.2
+pyzmq==27.1.0
+msgpack==1.2.1
+opencv-python-headless==4.11.0.86
+PyYAML==6.0.3

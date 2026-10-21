@@ -1,0 +1,6 @@
+{
+  "status": "STRUCTURE_CHECK_PASS_NOT_TRAINING_ACCEPTANCE",
+  "state_dimension": 36,
+  "action_dimension": 68,
+  "pending_hardware_mapping": true
+}

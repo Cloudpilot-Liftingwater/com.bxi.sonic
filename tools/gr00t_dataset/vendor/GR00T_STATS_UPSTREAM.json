@@ -1,0 +1,16 @@
+{
+  "repository": "https://github.com/NVIDIA/Isaac-GR00T",
+  "commit": "dac54b313160c201c450f97df0fd74ebd379c892",
+  "path": "gr00t/data/stats.py",
+  "sha256": "54fffdaa0a2bcf5356926e4d73b10dbbb9c848e0a56582427e4252f054938c74",
+  "unchanged_functions": [
+    "_load_stats_cache",
+    "_dump_stats_cache_atomic",
+    "calculate_dataset_statistics",
+    "_compute_stats_fingerprint",
+    "_stale_features",
+    "check_stats_validity",
+    "generate_stats"
+  ],
+  "function_sha256": "6129c6fb30ac9a57004a6e498024ed9145972c2ee894cfb371cc419238554e70"
+}

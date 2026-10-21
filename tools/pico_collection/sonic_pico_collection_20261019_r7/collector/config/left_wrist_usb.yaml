@@ -1,0 +1,15 @@
+/**:
+  ros__parameters:
+    video_device: "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:7:1.0-video-index0"
+    framerate: 30.0
+    io_method: "mmap"
+    frame_id: "left_wrist_camera_optical_frame"
+    pixel_format: "mjpeg2rgb"
+    av_device_format: "YUV422P"
+    image_width: 640
+    image_height: 480
+    camera_name: "left_wrist_camera"
+    camera_info_url: ""
+    auto_white_balance: true
+    autoexposure: true
+    autofocus: false

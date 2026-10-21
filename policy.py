@@ -8,17 +8,23 @@ RobotControlState.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import math
-import os
-import queue
 import time
+import queue
 from dataclasses import dataclass
 from threading import Event, Thread
 from typing import Any, Mapping, Optional
 
 import numpy as np
 import zmq
+
+# Optional observation only; unavailable recorder never blocks control.
+try:
+    from .tracking_tap import capture as _capture_tracking
+except Exception:
+    _capture_tracking = None
 
 from bxi_example_py_elf3.framework.inference import (
     InferenceFrame,
@@ -33,18 +39,12 @@ from bxi_example_py_elf3.framework.joints import JointParameterSet
 from bxi_example_py_elf3.framework.mod_api import LoggerLike
 from bxi_example_py_elf3.policies.joints import ELF3_POLICY_JOINTS
 
-from .reference_gate import (
-    LiveReferenceGate,
-    ReferenceGateMode,
-    SmplReferenceFrame,
-)
+from .pico.streamed_smpl_ref import IncomingChunk, StreamedSmplRefMerger
+
 from .pico.runtime_config import SMPL_REF_HOST, SMPL_REF_PORT, SMPL_REF_TOPIC
-from .pico.streamed_smpl_ref import (
-    IncomingChunk,
-    StreamedSmplRefMerger,
-)
 
 
+PLAYOUT_RELEASE = "20261015-playout-01-original-equivalent"
 HEADER_SIZE = 1280
 WINDOW = 10
 NUM_JOINTS = 29
@@ -53,6 +53,10 @@ PROPRIOCEPTION_DIM = 930
 MODEL_INPUT_DIM = SMPL_TOKENIZER_DIM + PROPRIOCEPTION_DIM
 ACTION_CLIP = 20.0
 DEFAULT_IDLE_FRAME_START = 3509
+MOTION_TOKEN_DIM = 64
+FSQ_LEVELS = 32
+FSQ_STEP = 2.0 / FSQ_LEVELS
+MODEL_ID = "elf3_sonic_step28800_action_post_fsq"
 
 SMPL_JOINTS_START = 0
 SMPL_ROOT_ORI_START = 720
@@ -66,31 +70,15 @@ DTYPE_MAP = {
     "u8": np.dtype("u1"),
     "bool": np.dtype("?"),
 }
-ZERO_LAB_SOURCE_METADATA = {
-    "source_generation": (
-        np.dtype(np.int64),
-        1,
-        int(np.iinfo(np.int64).max),
-    ),
-    "latest_real_frame_index": (
-        np.dtype(np.int64),
-        0,
-        int(np.iinfo(np.int64).max),
-    ),
-    "latest_real_receive_timestamp_ns": (
-        np.dtype(np.int64),
-        1,
-        int(np.iinfo(np.int64).max),
-    ),
-    "real_valid_frames_in_generation": (
-        np.dtype(np.int32),
-        0,
-        int(np.iinfo(np.int32).max),
-    ),
-    "real_stream_ready": (np.dtype(np.uint8), 0, 1),
-    "playout_kind": (np.dtype(np.uint8), 0, 3),
-    "source_stale": (np.dtype(np.uint8), 0, 1),
-}
+
+
+def _sha256_file(path: str) -> str:
+    digest = hashlib.sha256()
+    with open(path, "rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
 
 SONIC_PARAMETERS = JointParameterSet.from_rows(
     ELF3_POLICY_JOINTS,
@@ -128,6 +116,25 @@ SONIC_PARAMETERS = JointParameterSet.from_rows(
 )
 
 
+@dataclass
+class SmplReferenceFrame:
+    term1_local: np.ndarray
+    root_quat: np.ndarray
+    wrist: np.ndarray
+    head_joint_pos: np.ndarray
+    anchor_quat: Optional[np.ndarray] = None
+    frame_index: int = -1
+    sequence: int = 0
+    stream_epoch: Optional[int] = None
+    source_stale: bool = False
+    source_age_ms: Optional[float] = None
+    playback_hold: bool = False
+    newest_frame_index: int = -1
+    lead_frames: int = -1
+    valid_horizon: int = 0
+    clamp_slots: int = -1
+
+
 @dataclass(frozen=True, slots=True)
 class PolicyPlaybackTelemetry:
     """One successfully consumed live reference window."""
@@ -139,7 +146,6 @@ class PolicyPlaybackTelemetry:
     catchup_count: int
     stream_epoch: Optional[int]
     successful_inference_tick: int
-
 
 def _normalize_quat_wxyz(q: np.ndarray) -> np.ndarray:
     q = np.asarray(q, dtype=np.float64).reshape(4)
@@ -306,44 +312,7 @@ def _as_exact_live_window(
         )
     return np.ascontiguousarray(arr, dtype=np.float32)
 
-
-STRICT_LIVE_WINDOW_METADATA = frozenset(
-    ("stream_epoch", "valid_horizon", "clamp_slots")
-)
-
-
-def _parse_optional_source_metadata(
-    fields: Mapping[str, np.ndarray],
-) -> dict[str, np.ndarray] | None:
-    """Validate source-authoritative freshness fields after ZMQ decoding."""
-
-    present = set(fields).intersection(ZERO_LAB_SOURCE_METADATA)
-    if not present:
-        return None
-    missing = set(ZERO_LAB_SOURCE_METADATA) - present
-    if missing:
-        raise ValueError(
-            "ZeroLab source metadata must be complete; "
-            f"missing={sorted(missing)}"
-        )
-
-    metadata: dict[str, np.ndarray] = {}
-    for name, (dtype, minimum, maximum) in ZERO_LAB_SOURCE_METADATA.items():
-        value = np.asarray(fields[name])
-        if value.shape != (1,) or value.dtype != dtype:
-            raise ValueError(
-                f"ZeroLab source metadata {name} must be scalar {dtype}; "
-                f"got shape={value.shape} dtype={value.dtype}"
-            )
-        scalar = int(value[0])
-        if not minimum <= scalar <= maximum:
-            raise ValueError(
-                f"ZeroLab source metadata {name} must be in "
-                f"[{minimum}, {maximum}]; got {scalar}"
-            )
-        metadata[name] = np.array(value, copy=True)
-    return metadata
-
+STRICT_LIVE_WINDOW_METADATA = frozenset(("stream_epoch", "valid_horizon", "clamp_slots"))
 
 class SonicTeleopPolicy(JointPolicy):
     """SONIC SMPL teleoperation policy using the shared inference runtime."""
@@ -403,39 +372,15 @@ class SonicTeleopPolicy(JointPolicy):
         self.motion_cursor = self.idle_frame_start
         self.yaw_aligned = False
         self.yaw_offset = 0.0
-        self.stream_merger = StreamedSmplRefMerger()
-        self.source_stream_epoch: Optional[int] = None
-        self.source_generation: Optional[int] = None
-        self._seen_source_generations: set[int] = set()
-        self._source_metadata: Optional[dict[str, np.ndarray]] = None
-        self.last_source_newest_frame: Optional[int] = None
-        self.last_source_rx_mono = 0.0
-        self.source_chunk_messages = 0
-        self.source_chunk_duplicates = 0
-        self.source_chunk_restarts = 0
-        self.source_queue_drops = 0
-        self.source_pre_reset_drops = 0
-        self._reference_generation = 0
-        self._reference_reset_cutoff_mono = 0.0
-        self.has_seen_live_reference = False
-        self.live_reference_protocol = "none"
-        self.active_reference_kind = "none"
         self.latest_live_ref: Optional[SmplReferenceFrame] = None
-        self._live_reference_gate = LiveReferenceGate()
         self.head_joint_target = np.zeros(2, dtype=np.float32)
+        self.motion_token = np.zeros(MOTION_TOKEN_DIM, dtype=np.float32)
+        self.motion_token_valid = False
+        self.inference_sequence = 0
+        self.model_id = MODEL_ID
+        self.model_sha256 = _sha256_file(self.model_onnx_path)
         self.latest_live_ref_time = 0.0
         self.live_sequence = 0
-        self.stream_epoch: Optional[int] = None
-        self.invalid_live_ref_messages = 0
-        self.live_reference_stale = False
-        self.successful_inference_tick = 0
-        self.latest_playback_telemetry: Optional[
-            PolicyPlaybackTelemetry
-        ] = None
-        self.telemetry_log_every = max(
-            0,
-            int(os.environ.get("BXI_SONIC_TELEMETRY_LOG_EVERY", "0")),
-        )
         self.reference_source: Optional[str] = None
         self.source_blend_from = self.default_dof_pos.copy()
         self.source_blend_started_at = 0.0
@@ -445,6 +390,16 @@ class SonicTeleopPolicy(JointPolicy):
         self.last_status = "not_started"
         self._reported_status: Optional[str] = None
         self._logger: LoggerLike | None = None
+
+        self.stream_merger = StreamedSmplRefMerger()
+        self._reference_generation = 0
+        self._reference_reset_cutoff_mono = 0.0
+        self.source_chunk_messages = self.source_chunk_duplicates = 0
+        self.source_chunk_restarts = self.source_queue_drops = 0
+        self.source_pre_reset_drops = self.invalid_live_ref_messages = 0
+        self.successful_inference_tick = 0
+        self.telemetry_log_every = 250
+        self._reset_reference_stream()
 
         self._load_stream_reference()
         self._init_backend(backend)
@@ -487,12 +442,22 @@ class SonicTeleopPolicy(JointPolicy):
             )
 
     def _init_backend(self, backend: str) -> None:
-        spec = ModelSpec.portable_onnx(
+        # Formal collection requires action and post-FSQ token to come from
+        # one graph execution. Do not select an RKNN + ONNX sidecar route:
+        # that would pair outputs from two decoder executions.
+        spec = ModelSpec.onnx(
             self.model_onnx_path,
             input_names=("obs_dict",),
-            output_names=("action",),
+            output_names=("action", "motion_token"),
         )
         self._backend = self._runtime.open_backend(spec, backend=backend)
+        if tuple(self._backend.output_shape("action")) != (1, NUM_JOINTS):
+            raise ValueError("SONIC action output must have shape (1,29)")
+        if tuple(self._backend.output_shape("motion_token")) != (
+            1,
+            MOTION_TOKEN_DIM,
+        ):
+            raise ValueError("SONIC motion_token output must have shape (1,64)")
         self.input_buffer = np.zeros((1, MODEL_INPUT_DIM), dtype=np.float32)
         self._inputs = {"obs_dict": self.input_buffer}
         self._backend.warmup(self._inputs, self._runtime.options.warmup_runs)
@@ -605,253 +570,6 @@ class SonicTeleopPolicy(JointPolicy):
         except queue.Full:
             self.source_queue_drops += 1
 
-    def close(self) -> None:
-        """Release ZMQ resources owned by this policy instance."""
-        stop = getattr(self, "_zmq_stop", None)
-        if stop is not None:
-            stop.set()
-        thread = getattr(self, "_zmq_thread", None)
-        if thread is not None:
-            thread.join(timeout=1.0)
-            if thread.is_alive():
-                raise RuntimeError("SONIC reference receiver did not stop")
-            self._zmq_thread = None
-        backend = getattr(self, "_backend", None)
-        if backend is not None:
-            backend.close()
-            self._backend = None
-
-    def __del__(self) -> None:
-        try:
-            self.close()
-        except Exception:
-            pass
-
-    def _load_stream_reference(self) -> None:
-        d = np.load(self.stream_reference_npz)
-        self.ref_term1 = np.asarray(d["term1_local"], dtype=np.float32)
-        self.ref_root_quat = np.asarray(d["root_quat"], dtype=np.float32)
-        self.ref_wrist = np.asarray(d["wrist"], dtype=np.float32)
-        self.ref_anchor_quat = (
-            np.asarray(d["anchor_quat"], dtype=np.float32)
-            if "anchor_quat" in d.files
-            else None
-        )
-        if self.ref_term1.ndim != 2 or self.ref_term1.shape[1] != 72:
-            raise ValueError(
-                f"term1_local shape {self.ref_term1.shape}, expected (T,72)"
-            )
-        if self.ref_root_quat.shape != (self.ref_term1.shape[0], 4):
-            raise ValueError("root_quat shape does not match term1_local")
-        if self.ref_wrist.shape != (self.ref_term1.shape[0], 6):
-            raise ValueError("wrist shape does not match term1_local")
-        if self.ref_term1.shape[0] < WINDOW:
-            raise ValueError(
-                f"reference only has {self.ref_term1.shape[0]} frames; "
-                f"expected at least {WINDOW}"
-            )
-        self.idle_frame_start = int(
-            np.clip(self.idle_frame_start, 0, self.ref_term1.shape[0] - WINDOW)
-        )
-
-    def reset(self, frame: InferenceFrame | None = None) -> None:
-        # Invalidate any receive operation that began before this reset.  The
-        # receiver is the sole ZMQ socket owner, so reset only changes this
-        # lock-free generation and drains the thread-safe handoff queue.
-        self._reference_generation += 1
-        self._reference_reset_cutoff_mono = time.monotonic()
-        if frame is not None:
-            self.bind_joints(frame)
-        self.last_action.fill(0.0)
-        self.base_ang_vel_history.fill(0.0)
-        self.joint_pos_history.fill(0.0)
-        self.joint_vel_history.fill(0.0)
-        self.action_history.fill(0.0)
-        self.gravity_history.fill(0.0)
-        self.motion_cursor = self.idle_frame_start
-        self.reset_yaw_alignment()
-        self.stream_merger.reset()
-        self.source_stream_epoch = None
-        self.source_generation = None
-        self._seen_source_generations.clear()
-        self._source_metadata = None
-        self.last_source_newest_frame = None
-        self.last_source_rx_mono = 0.0
-        self.has_seen_live_reference = False
-        self.live_reference_protocol = "none"
-        self.active_reference_kind = "none"
-        self.latest_live_ref = None
-        self._live_reference_gate.reset()
-        self.head_joint_target.fill(0.0)
-        self.latest_live_ref_time = 0.0
-        self.live_sequence = 0
-        self.stream_epoch = None
-        self.live_reference_stale = False
-        self.latest_playback_telemetry = None
-        self.reference_source = None
-        self.source_blend_from = self.default_dof_pos.copy()
-        self.source_blend_started_at = 0.0
-        self.source_blend_active = False
-        self.source_transition_from = None
-        self.policy_active = False
-        self.last_status = "reset"
-        self._reported_status = None
-        np.copyto(self.target_dof_pos, self.default_dof_pos)
-        self.publish_output(self.target_dof_pos, self.kps, self.kds)
-        self._drain_reference_socket()
-
-    def has_fresh_live_reference(self, timeout_s: float | None = None) -> bool:
-        self.poll_reference()
-        frame = self._live_reference_gate.observed_reference
-        timeout = self.live_ref_timeout_s if timeout_s is None else float(timeout_s)
-        if frame is None:
-            return False
-        if frame.source_generation is None:
-            return time.monotonic() - self.latest_live_ref_time <= timeout
-        age_ns = max(
-            0,
-            time.monotonic_ns()
-            - int(frame.latest_real_receive_timestamp_ns),
-        )
-        return bool(
-            frame.real_stream_ready
-            and not frame.source_stale
-            and age_ns <= int(timeout * 1_000_000_000)
-        )
-
-    def live_reference_recovery_ready(self, required_real_frames: int) -> bool:
-        self.poll_reference()
-        frame = self._live_reference_gate.observed_reference
-        return bool(
-            frame is not None
-            and frame.source_generation is not None
-            and frame.real_stream_ready
-            and frame.real_valid_frames_in_generation
-            >= int(required_real_frames)
-            and self.has_fresh_live_reference()
-        )
-
-    def hold_live_reference(self) -> bool:
-        self.poll_reference()
-        return self._live_reference_gate.hold()
-
-    def begin_live_reference_rearm(self) -> bool:
-        self.poll_reference()
-        return self._live_reference_gate.begin_rearm()
-
-    def set_live_reference_rearm_progress(self, alpha: float) -> None:
-        self._live_reference_gate.set_rearm_progress(alpha)
-
-    def complete_live_reference_rearm(self) -> None:
-        self._live_reference_gate.complete_rearm()
-
-    def release_live_reference_hold(self) -> None:
-        self._live_reference_gate.release_to_live()
-
-    def reset_yaw_alignment(self) -> None:
-        self.yaw_aligned = False
-        self.yaw_offset = 0.0
-
-    def _drain_reference_socket(self) -> None:
-        """Discard packets queued before a SONIC reset/re-entry."""
-        while True:
-            try:
-                self._reference_messages.get_nowait()
-            except queue.Empty:
-                return
-
-    def poll_reference(self) -> Optional[SmplReferenceFrame]:
-        while True:
-            try:
-                msg, received_mono, generation = (
-                    self._reference_messages.get_nowait()
-                )
-            except queue.Empty:
-                break
-            if (
-                generation != self._reference_generation
-                or received_mono < self._reference_reset_cutoff_mono
-            ):
-                self.source_pre_reset_drops += 1
-                continue
-            try:
-                fields = _decode_packed_message(
-                    msg,
-                    self.smpl_ref_zmq_topic,
-                )
-                if not fields:
-                    raise ValueError("invalid smpl_ref message")
-                source_received_ns = int(
-                    self._field_scalar(
-                        fields,
-                        "source_received_monotonic_ns",
-                        0,
-                    )
-                )
-                if (
-                    source_received_ns > 0
-                    and source_received_ns
-                    < int(self._reference_reset_cutoff_mono * 1.0e9)
-                ):
-                    self.source_pre_reset_drops += 1
-                    continue
-                if bool(self._field_scalar(fields, "source_chunk", False)):
-                    self._merge_source_fields(fields, received_mono)
-                    continue
-                frame = self._frame_from_fields(fields)
-            except (
-                IndexError,
-                KeyError,
-                TypeError,
-                UnicodeDecodeError,
-                ValueError,
-                json.JSONDecodeError,
-            ):
-                self.invalid_live_ref_messages += 1
-                continue
-
-            if not self.has_seen_live_reference:
-                self.reset_yaw_alignment()
-            self.has_seen_live_reference = True
-            self.stream_merger.reset()
-            self.source_stream_epoch = None
-            self.source_generation = None
-            self._source_metadata = None
-            self.last_source_newest_frame = None
-            self.live_reference_protocol = "legacy_window"
-            self.latest_live_ref = frame
-            self.latest_live_ref_time = received_mono
-            self._live_reference_gate.observe(
-                self.latest_live_ref,
-                self.latest_live_ref_time,
-            )
-
-        if self.stream_merger.timesteps >= WINDOW:
-            age_s = max(0.0, time.monotonic() - self.last_source_rx_mono)
-            fields = self.stream_merger.build_smpl_ref(
-                source_age_ms=age_s * 1000.0,
-                source_stale=age_s > self.live_ref_timeout_s,
-            )
-            if fields is not None:
-                if self._source_metadata is not None:
-                    fields.update(
-                        {
-                            name: np.array(value, copy=True)
-                            for name, value in self._source_metadata.items()
-                        }
-                    )
-                if not self.has_seen_live_reference:
-                    self.reset_yaw_alignment()
-                self.has_seen_live_reference = True
-                self.live_reference_protocol = "source_chunk"
-                self.latest_live_ref = self._frame_from_fields(fields)
-                self.latest_live_ref_time = self.last_source_rx_mono
-                self._live_reference_gate.observe(
-                    self.latest_live_ref,
-                    self.latest_live_ref_time,
-                )
-        return self.latest_live_ref
-
     @staticmethod
     def _field_scalar(
         fields: dict[str, np.ndarray],
@@ -906,29 +624,176 @@ class SonicTeleopPolicy(JointPolicy):
             head_joint_pos=matrix("head_joint_pos", 2),
         )
 
+    def close(self) -> None:
+        """Release ZMQ resources owned by this policy instance."""
+        stop = getattr(self, "_zmq_stop", None)
+        if stop is not None:
+            stop.set()
+        thread = getattr(self, "_zmq_thread", None)
+        if thread is not None:
+            thread.join(timeout=1.0)
+            if thread.is_alive():
+                raise RuntimeError("SONIC reference receiver did not stop")
+            self._zmq_thread = None
+        backend = getattr(self, "_backend", None)
+        if backend is not None:
+            backend.close()
+            self._backend = None
+
+    def __del__(self) -> None:
+        try:
+            self.close()
+        except Exception:
+            pass
+
+    def _load_stream_reference(self) -> None:
+        d = np.load(self.stream_reference_npz)
+        self.ref_term1 = np.asarray(d["term1_local"], dtype=np.float32)
+        self.ref_root_quat = np.asarray(d["root_quat"], dtype=np.float32)
+        self.ref_wrist = np.asarray(d["wrist"], dtype=np.float32)
+        self.ref_anchor_quat = (
+            np.asarray(d["anchor_quat"], dtype=np.float32)
+            if "anchor_quat" in d.files
+            else None
+        )
+        if self.ref_term1.ndim != 2 or self.ref_term1.shape[1] != 72:
+            raise ValueError(
+                f"term1_local shape {self.ref_term1.shape}, expected (T,72)"
+            )
+        if self.ref_root_quat.shape != (self.ref_term1.shape[0], 4):
+            raise ValueError("root_quat shape does not match term1_local")
+        if self.ref_wrist.shape != (self.ref_term1.shape[0], 6):
+            raise ValueError("wrist shape does not match term1_local")
+        if self.ref_term1.shape[0] < WINDOW:
+            raise ValueError(
+                f"reference only has {self.ref_term1.shape[0]} frames; expected at least {WINDOW}"
+            )
+        self.idle_frame_start = int(
+            np.clip(self.idle_frame_start, 0, self.ref_term1.shape[0] - WINDOW)
+        )
+
+    def _reset_reference_stream(self) -> None:
+        self.stream_merger.reset()
+        self.source_stream_epoch = self.last_source_newest_frame = None
+        self.last_source_rx_mono = 0.0
+        self.has_seen_live_reference = False
+        self.live_reference_protocol = self.active_reference_kind = "none"
+        self.stream_epoch = None
+        self.live_reference_stale = False
+        self.latest_playback_telemetry = None
+
+    def reset(self, frame: InferenceFrame | None = None) -> None:
+        self._reference_generation += 1
+        self._reference_reset_cutoff_mono = time.monotonic()
+        self._reset_reference_stream()
+        if frame is not None:
+            self.bind_joints(frame)
+        self.last_action.fill(0.0)
+        self.motion_token.fill(0.0)
+        self.motion_token_valid = False
+        self.base_ang_vel_history.fill(0.0)
+        self.joint_pos_history.fill(0.0)
+        self.joint_vel_history.fill(0.0)
+        self.action_history.fill(0.0)
+        self.gravity_history.fill(0.0)
+        self.motion_cursor = self.idle_frame_start
+        self.yaw_aligned = False
+        self.yaw_offset = 0.0
+        self.latest_live_ref = None
+        self.head_joint_target.fill(0.0)
+        self.latest_live_ref_time = 0.0
+        self.live_sequence = 0
+        self.reference_source = None
+        self.source_blend_from = self.default_dof_pos.copy()
+        self.source_blend_started_at = 0.0
+        self.source_blend_active = False
+        self.source_transition_from = None
+        self.policy_active = False
+        self.last_status = "reset"
+        self._reported_status = None
+        np.copyto(self.target_dof_pos, self.default_dof_pos)
+        self.publish_output(self.target_dof_pos, self.kps, self.kds)
+        self._drain_reference_socket()
+
+    def has_fresh_live_reference(self, timeout_s: float | None = None) -> bool:
+        self.poll_reference()
+        timeout = self.live_ref_timeout_s if timeout_s is None else float(timeout_s)
+        return bool(
+            self.latest_live_ref is not None
+            and time.monotonic() - self.latest_live_ref_time <= timeout
+        )
+
+    def reset_yaw_alignment(self) -> None:
+        self.yaw_aligned = False
+        self.yaw_offset = 0.0
+
+    def _drain_reference_socket(self) -> None:
+        """Discard packets queued before a SONIC reset/re-entry."""
+        while True:
+            try:
+                self._reference_messages.get_nowait()
+            except queue.Empty:
+                return
+
+    def poll_reference(self) -> Optional[SmplReferenceFrame]:
+        while True:
+            try:
+                msg, received_mono, generation = self._reference_messages.get_nowait()
+            except queue.Empty:
+                break
+            if (generation != self._reference_generation
+                    or received_mono < self._reference_reset_cutoff_mono):
+                self.source_pre_reset_drops += 1
+                continue
+            try:
+                fields = _decode_packed_message(msg, self.smpl_ref_zmq_topic)
+                if not fields:
+                    raise ValueError("invalid smpl_ref message")
+                source_ns = int(self._field_scalar(fields, "source_received_monotonic_ns", 0))
+                if source_ns > 0 and source_ns < int(self._reference_reset_cutoff_mono * 1e9):
+                    self.source_pre_reset_drops += 1
+                    continue
+                if bool(self._field_scalar(fields, "source_chunk", False)):
+                    self._merge_source_fields(fields, received_mono)
+                    continue
+                frame = self._frame_from_fields(fields)
+            except (IndexError, KeyError, TypeError, UnicodeDecodeError, ValueError, json.JSONDecodeError):
+                self.invalid_live_ref_messages += 1
+                continue
+            if not self.has_seen_live_reference:
+                self.reset_yaw_alignment()
+            self.has_seen_live_reference = True
+            self.stream_merger.reset()
+            self.source_stream_epoch = self.last_source_newest_frame = None
+            self.live_reference_protocol = "legacy_window"
+            self.latest_live_ref = frame
+            self.latest_live_ref_time = received_mono
+
+        if self.stream_merger.timesteps >= WINDOW:
+            age_s = max(0.0, time.monotonic() - self.last_source_rx_mono)
+            fields = self.stream_merger.build_smpl_ref(
+                source_age_ms=age_s * 1000.0,
+                source_stale=age_s > self.live_ref_timeout_s,
+            )
+            if fields is not None:
+                if not self.has_seen_live_reference:
+                    self.reset_yaw_alignment()
+                self.has_seen_live_reference = True
+                self.live_reference_protocol = "source_chunk"
+                self.latest_live_ref = self._frame_from_fields(fields)
+                self.latest_live_ref_time = self.last_source_rx_mono
+        return self.latest_live_ref
+
     def _merge_source_fields(
         self,
         fields: dict[str, np.ndarray],
         received_mono: float,
     ) -> bool:
-        source_metadata = _parse_optional_source_metadata(fields)
-        source_generation = (
-            int(source_metadata["source_generation"][0])
-            if source_metadata is not None
-            else None
-        )
-        if (
-            source_generation is not None
-            and source_generation != self.source_generation
-            and source_generation in self._seen_source_generations
-        ):
-            return False
-
         chunk = self._source_chunk_from_fields(fields)
-        source_epoch = (
-            source_generation
-            if source_generation is not None
-            else int(self._field_scalar(fields, "source_stream_epoch", 0))
+        if np.any(np.linalg.norm(chunk.root_quat, axis=1) <= 1.0e-6):
+            raise ValueError("source chunk contains invalid root quaternion")
+        source_epoch = int(
+            self._field_scalar(fields, "source_stream_epoch", 0)
         )
         if source_epoch <= 0:
             raise ValueError("source chunk missing positive source_stream_epoch")
@@ -955,12 +820,6 @@ class SonicTeleopPolicy(JointPolicy):
             self.reset_yaw_alignment()
         self.last_source_newest_frame = newest
         self.last_source_rx_mono = float(received_mono)
-        self.source_generation = source_generation
-        if source_metadata is None:
-            self._source_metadata = None
-        else:
-            self._seen_source_generations.add(source_generation)
-            self._source_metadata = source_metadata
         self.source_chunk_messages += 1
         return True
 
@@ -1023,36 +882,6 @@ class SonicTeleopPolicy(JointPolicy):
                 if fields.get("stream_epoch") is not None
                 else None
             ),
-            source_generation=(
-                int(scalar("source_generation", 0))
-                if fields.get("source_generation") is not None
-                else None
-            ),
-            latest_real_frame_index=(
-                int(scalar("latest_real_frame_index", -1))
-                if fields.get("latest_real_frame_index") is not None
-                else None
-            ),
-            latest_real_receive_timestamp_ns=(
-                int(scalar("latest_real_receive_timestamp_ns", 0))
-                if fields.get("latest_real_receive_timestamp_ns") is not None
-                else None
-            ),
-            real_valid_frames_in_generation=(
-                int(scalar("real_valid_frames_in_generation", 0))
-                if fields.get("real_valid_frames_in_generation") is not None
-                else None
-            ),
-            real_stream_ready=(
-                bool(scalar("real_stream_ready", False))
-                if fields.get("real_stream_ready") is not None
-                else None
-            ),
-            playout_kind=(
-                int(scalar("playout_kind", 0))
-                if fields.get("playout_kind") is not None
-                else None
-            ),
             source_stale=bool(scalar("source_stale", False)),
             source_age_ms=(
                 float(scalar("source_age_ms", 0.0))
@@ -1102,40 +931,21 @@ class SonicTeleopPolicy(JointPolicy):
         )
 
     def _active_reference(self) -> tuple[SmplReferenceFrame, str, float]:
-        self.poll_reference()
-        live = self._live_reference_gate.active_reference()
+        live = self.poll_reference()
         now_mono = time.monotonic()
         if live is not None:
             if live.stream_epoch is not None and live.stream_epoch != self.stream_epoch:
                 self.stream_epoch = live.stream_epoch
                 self.reset_yaw_alignment()
-
-            if live.source_generation is None:
-                local_age_s = max(0.0, now_mono - self.latest_live_ref_time)
-                source_age_stale = (
-                    live.source_age_ms is not None
-                    and live.source_age_ms > self.live_ref_timeout_s * 1000.0
-                )
-                self.live_reference_stale = bool(
-                    live.source_stale
-                    or source_age_stale
-                    or local_age_s > self.live_ref_timeout_s
-                )
-            else:
-                real_age_ns = max(
-                    0,
-                    time.monotonic_ns()
-                    - int(live.latest_real_receive_timestamp_ns),
-                )
-                self.live_reference_stale = bool(
-                    not live.real_stream_ready
-                    or live.source_stale
-                    or real_age_ns
-                    > int(self.live_ref_timeout_s * 1_000_000_000)
-                )
+            self.live_reference_stale = bool(
+                live.source_stale
+                or (live.source_age_ms is not None and live.source_age_ms > self.live_ref_timeout_s * 1000.0)
+                or now_mono - self.latest_live_ref_time > self.live_ref_timeout_s
+            )
             self.active_reference_kind = self.live_reference_protocol
+            # Original SONIC behavior: consume buffered frames, then hold the
+            # protected complete tail. Staleness never selects idle mid-session.
             return live, "live", now_mono
-
         self.live_reference_stale = False
         self.active_reference_kind = "idle"
         return self._offline_frame(), "idle", now_mono
@@ -1166,24 +976,6 @@ class SonicTeleopPolicy(JointPolicy):
             self.source_blend_active = False
             self.source_transition_from = None
         return np.asarray(blended, dtype=np.float32)
-
-    def record_applied_joint_target(self, applied_qpos: object) -> None:
-        """Record the preceding applied qpos in model action coordinates."""
-        qpos = np.asarray(applied_qpos)
-        if qpos.shape != (NUM_JOINTS,) or not np.isfinite(qpos).all():
-            raise ValueError(
-                "applied joint target must contain exactly 29 finite values"
-            )
-        normalized = (
-            qpos.astype(np.float32, copy=False) - self.default_dof_pos
-        ) / self.action_scale
-        if not np.isfinite(normalized).all():
-            raise ValueError("normalized applied joint target must be finite")
-        np.copyto(
-            self.last_action,
-            np.clip(normalized, -ACTION_CLIP, ACTION_CLIP),
-            casting="same_kind",
-        )
 
     def _update_history(
         self, q: np.ndarray, dq: np.ndarray, quat_wxyz: np.ndarray, omega: np.ndarray
@@ -1285,11 +1077,29 @@ class SonicTeleopPolicy(JointPolicy):
 
         model_input = self._build_model_input(frame, q, dq, quat_wxyz, omega)
         np.copyto(self.input_buffer, model_input)
-        raw_action = np.asarray(self._backend.run(self._inputs)["action"]).reshape(-1)
+        outputs = self._backend.run(self._inputs)
+        raw_action = np.asarray(outputs["action"], dtype=np.float32).reshape(-1)
+        motion_token = np.asarray(
+            outputs["motion_token"], dtype=np.float32
+        ).reshape(-1)
         if raw_action.size != NUM_JOINTS:
             raise ValueError(
                 f"SONIC output has {raw_action.size} values; expected {NUM_JOINTS}"
             )
+        if motion_token.shape != (MOTION_TOKEN_DIM,):
+            raise ValueError(
+                f"SONIC motion_token has shape {motion_token.shape}; expected (64,)"
+            )
+        if not np.isfinite(motion_token).all():
+            raise ValueError("SONIC motion_token contains NaN or Inf")
+        units = motion_token / FSQ_STEP
+        if not np.allclose(units, np.rint(units), rtol=0.0, atol=1.0e-5):
+            raise ValueError("SONIC motion_token is not on the 32-level FSQ grid")
+        if (
+            float(motion_token.min()) < -1.0 - 1.0e-6
+            or float(motion_token.max()) > 1.0 - FSQ_STEP + 1.0e-6
+        ):
+            raise ValueError("SONIC motion_token is outside the expected FSQ range")
         action = np.clip(raw_action, -ACTION_CLIP, ACTION_CLIP).astype(np.float32)
         candidate = self.default_dof_pos + action * self.action_scale
         np.copyto(
@@ -1299,31 +1109,31 @@ class SonicTeleopPolicy(JointPolicy):
         self.last_action = (
             (self.target_dof_pos - self.default_dof_pos) / self.action_scale
         ).astype(np.float32)
+        np.copyto(self.motion_token, motion_token)
+        self.inference_sequence += 1
+        # A blended motor target no longer equals the decoder action paired
+        # with this token, so it must never become a training label.
+        self.motion_token_valid = (source == "live" and not self.live_reference_stale
+                                   and not self.source_blend_active)
         self.policy_active = True
         if source == "live":
-            if self._live_reference_gate.mode is ReferenceGateMode.HOLD:
-                self.last_status = "held_reference"
-            elif self._live_reference_gate.mode is ReferenceGateMode.REARMING:
-                self.last_status = "rearming_reference"
-            else:
-                self.last_status = (
-                    "stale_hold"
-                    if self.live_reference_stale
-                    else "live_reference"
-                )
+            self.last_status = "stale_hold" if self.live_reference_stale else "live_reference"
         else:
             self.last_status = "idle_reference"
         if self.last_status != self._reported_status:
             if self._logger is None:
                 raise RuntimeError("SONIC policy logger is not bound")
-            self._logger.info(f"reference status: {self.last_status}")
+            self._logger.info(f"SONIC playout={PLAYOUT_RELEASE}; reference status: {self.last_status}")
             self._reported_status = self.last_status
-
-        # Official order: gather -> successful inference/action -> advance.
-        # Any backend/output exception above therefore leaves the cursor intact.
         if self.active_reference_kind == "source_chunk":
             advanced = self.stream_merger.advance_after_successful_tick()
             self._record_playback_telemetry(frame, advanced=advanced)
+        if _capture_tracking is not None:
+            try:
+                _capture_tracking(self, frame, source, model_input, raw_action,
+                                  action, candidate, q, dq, now_mono)
+            except Exception:
+                pass  # Observation failures must never affect the robot.
         return self.target_dof_pos
 
     def _record_playback_telemetry(
@@ -1388,9 +1198,4 @@ class SonicTeleopPolicy(JointPolicy):
         """Satisfy JointPolicy's decoder contract; custom step decodes inline."""
 
 
-__all__ = [
-    "PolicyPlaybackTelemetry",
-    "SONIC_PARAMETERS",
-    "SmplReferenceFrame",
-    "SonicTeleopPolicy",
-]
+__all__ = ["SONIC_PARAMETERS", "SmplReferenceFrame", "SonicTeleopPolicy"]

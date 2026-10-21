@@ -1,0 +1,73 @@
+{
+  "source": "robot_20261020_Elb7su",
+  "verified_unix": 1792480073.7330737,
+  "comparison": {
+    "sonic": {
+      "identical_files": 120,
+      "intentional_document_changes": [
+        "README.md",
+        "SONIC_ELF3.md"
+      ]
+    },
+    "primary_host_source": {
+      "identical_files": 653,
+      "intentional_document_changes": []
+    },
+    "underlay_source": {
+      "identical_files": 798,
+      "intentional_document_changes": []
+    },
+    "collection_base": {
+      "identical_files": 172,
+      "intentional_document_changes": []
+    },
+    "collector_r7": {
+      "identical_files": 77,
+      "intentional_document_changes": []
+    }
+  },
+  "source_install_sonic_identical": 122,
+  "source_build_host_python_identical": 72,
+  "tests": {
+    "gripper_factory_mapping_native66": {
+      "passed": 38,
+      "fixture": "work/robot_sync_20261020/validation_harness; imports actual synchronized SONIC source; ROS/CAN mocked; old left6/right5 expectations adapted to field5/6"
+    },
+    "input_playout": {
+      "passed": 18,
+      "historical_hash_test_deselected": 1,
+      "reason": "old frozen release had old mapping; replaced by full current-archive hash verification"
+    },
+    "collector_r7": {
+      "passed": 155,
+      "skipped": 4,
+      "reason": "historical cross-release development fixtures absent"
+    },
+    "tracking_eval": {
+      "passed": 84,
+      "skipped": 1,
+      "reason": "historical developer baseline absent",
+      "sandbox": "82 passed in sandbox; 2 local Unix socket tests passed with sandbox escalation"
+    }
+  },
+  "total_passed": 295,
+  "total_skipped": 5,
+  "native_rebuild_matches_robot": true,
+  "native_sha256": "7123406190d91131a279265440c0630432a1158475305f3399610a81af5665fc",
+  "robot_actions": 0,
+  "new_hardware_test": false,
+  "github_updated": false,
+  "source_only": true,
+  "existing_local_build_install_rebuilt": false,
+  "historical_task_data_in_archive": {
+    "files": 8814,
+    "approx_MiB": 1704.09,
+    "copied_to_maintenance_source": false
+  },
+  "limitations": [
+    "5 external Ubuntu/ROS links recorded in original selection.json",
+    "vendor-only binaries remain binaries",
+    "full PanelOS/offline TTS trees not exported",
+    "r7 service inactive at capture; no valid task-data field acceptance claimed"
+  ]
+}

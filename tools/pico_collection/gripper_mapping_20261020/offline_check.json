@@ -1,0 +1,16 @@
+{
+  "checks": [
+    "audited source/install/collector mapping aligned; all other bytes unchanged",
+    "byte-exact backup of all changed files",
+    "repeat apply is idempotent",
+    "failed reload rolls back controller and collector together",
+    "source/install symlinks preserved and updated once",
+    "unknown service/configuration and duplicate keys refused",
+    "active listener blocks apply; read-only check still works",
+    "active controller blocks apply"
+  ],
+  "passed": 8,
+  "robot_connections": 0,
+  "hardware_commands": 0,
+  "scope": "mapping installer only; no claim of hardware validation"
+}

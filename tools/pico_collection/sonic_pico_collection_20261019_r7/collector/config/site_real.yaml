@@ -1,0 +1,157 @@
+mode: real
+
+dataset:
+  output_root: data
+  fps: 30
+  min_episode_frames: 100
+  jpeg_quality: 92
+  queue_capacity: 128
+  default_task_id: REPLACE_TASK_ID
+  tasks:
+    - id: REPLACE_TASK_ID
+      instruction: REPLACE_WITH_EXACT_TASK_INSTRUCTION
+
+robot:
+  actuator_state_topic: /hardware/actuator_states
+  actuator_command_topic: /hardware/actuators_cmds
+  imu_topic: /hardware/imu_data
+  odom_topic: /hardware/odom
+  touch_topic: /hardware/touch_sensor
+  state_machine_topic: /hardware/state_machine_info
+  motion_commands_topic: /motion_commands
+  max_robot_delta_ms: 50.0
+  max_imu_delta_ms: 50.0
+  max_state_machine_age_ms: 300.0
+  imu_orientation_correction_wxyz: [1.0, 0.0, 0.0, 0.0]
+  body_joint_names:
+    - waist_y_joint
+    - waist_x_joint
+    - waist_z_joint
+    - l_hip_y_joint
+    - l_hip_x_joint
+    - l_hip_z_joint
+    - l_knee_y_joint
+    - l_ankle_y_joint
+    - l_ankle_x_joint
+    - r_hip_y_joint
+    - r_hip_x_joint
+    - r_hip_z_joint
+    - r_knee_y_joint
+    - r_ankle_y_joint
+    - r_ankle_x_joint
+    - l_shoulder_y_joint
+    - l_shoulder_x_joint
+    - l_shoulder_z_joint
+    - l_elbow_y_joint
+    - l_wrist_x_joint
+    - l_wrist_y_joint
+    - l_wrist_z_joint
+    - r_shoulder_y_joint
+    - r_shoulder_x_joint
+    - r_shoulder_z_joint
+    - r_elbow_y_joint
+    - r_wrist_x_joint
+    - r_wrist_y_joint
+    - r_wrist_z_joint
+
+sequence:
+  mode: counter
+  frame_prefix: elf3/state/
+  counter_start: -1
+  history_size: 512
+  pairing_timeout_ms: 250.0
+
+gripper:
+  enabled: true
+  state_topic: /hardware/gripper_joint_states
+  command_topic: /sonic/gripper_joint_commands
+  state_joint_names:
+    - l_gripper_gripper_joint
+    - l_gripper_gripper_mimic_joint
+    - r_gripper_gripper_joint
+    - r_gripper_gripper_mimic_joint
+  command_joint_names:
+    - left_gripper
+    - right_gripper
+
+motion_token:
+  source: customer_sonic_step28800_post_fsq_decoder_input
+  dimension: 64
+  fsq_levels: 32
+  topic: /sonic/inference_result
+  model_id: elf3_sonic_step28800_action_post_fsq
+  sha256: 50303783f72ca61674b54987cab20abd11d0ced25c7042062fb03ef6355cdfdf
+  required_policy_status: live_reference
+  max_delta_ms: 50.0
+  action_match_atol: 1.0e-5
+
+pico:
+  host: 127.0.0.1
+  port: 5556
+  topic: pose
+  max_delta_ms: 200.0
+
+smpl_ref:
+  host: 127.0.0.1
+  port: 5557
+  topic: smpl_ref
+  max_delta_ms: 200.0
+
+cameras:
+  max_delta_ms: 50.0
+  history_size: 16
+  head_rgb:
+    enabled: true
+    topic: /hardware/head_depth_camera/color/image_raw
+    camera_info_topic: /hardware/head_depth_camera/color/camera_info
+    message_type: raw
+    width: 640
+    height: 480
+    fps: 30
+    serial: "261222075031"
+    calibration_file: not_required
+    frame_id: head_depth_camera_color_optical_frame
+  head_depth:
+    enabled: true
+    topic: /hardware/head_depth_camera/aligned_depth_to_color/image_raw
+    camera_info_topic: /hardware/head_depth_camera/aligned_depth_to_color/camera_info
+    message_type: raw
+    serial: "261222075031"
+    calibration_file: not_required
+    frame_id: head_depth_camera_color_optical_frame
+    aligned_to: head_rgb
+  left_wrist_rgb:
+    enabled: true
+    topic: /hardware/left_wrist_camera/image_raw/compressed
+    camera_info_topic: /hardware/left_wrist_camera/color/camera_info
+    message_type: compressed
+    width: 640
+    height: 480
+    fps: 30
+    serial: "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:5.1:1.0-video-index0"
+    calibration_file: not_required
+    frame_id: left_wrist_camera_optical_frame
+  right_wrist_rgb:
+    enabled: true
+    topic: /hardware/right_wrist_camera/image_raw/compressed
+    camera_info_topic: /hardware/right_wrist_camera/color/camera_info
+    message_type: compressed
+    width: 640
+    height: 480
+    fps: 30
+    serial: "/dev/v4l/by-path/pci-0000:00:14.0-usb-0:5.2:1.0-video-index0"
+    calibration_file: not_required
+    frame_id: right_wrist_camera_optical_frame
+
+requirements:
+  formal_collection: true
+  require_camera_info: false
+  require_pico_calibrated: true
+  state_machine_state: com.bxi.sonic/sonic_teleop
+
+metadata:
+  robot_serial: REPLACE_ROBOT_SERIAL
+  operator_id: REPLACE_OPERATOR_ID
+  site: REPLACE_SITE
+  camera_calibration_status: not_required
+  notes: REPLACE_NOTES

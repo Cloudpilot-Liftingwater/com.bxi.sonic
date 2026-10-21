@@ -1,0 +1,20 @@
+{
+  "robot_hostname": "elf3-test-01",
+  "ros_domain_id": 31,
+  "ros_setup": "/opt/ros/humble/setup.bash",
+  "controller_setup": "SET_TO_YOUR_BUILT_EXAMPLE_INSTALL/setup.bash",
+  "runs_root": "",
+  "data_root": "",
+  "wrist_usb_ports": {
+    "left": 7,
+    "right": 1
+  },
+  "camera_roles_confirmed": false,
+  "camera_role_evidence": "Fill in the actual left/right occluded-lens check and date",
+  "rmw_implementation": "rmw_cyclonedds_cpp",
+  "ros_localhost_only": "0",
+  "cyclonedds_uri": "<CycloneDDS><Domain Id=\"any\"><General><Interfaces><NetworkInterface name=\"lo\" multicast=\"true\"/></Interfaces><AllowMulticast>true</AllowMulticast></General></Domain></CycloneDDS>",
+  "training_export": false,
+  "training_task": "",
+  "capture_profile": "sonic50_latest_rgb"
+}

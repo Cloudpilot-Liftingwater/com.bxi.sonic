@@ -65,6 +65,24 @@ PICO_SPINE3_JOINT_INDEX = 9
 PICO_HEAD_JOINT_INDEX = 15
 
 
+def _env_enabled(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("1", "true", "yes", "on")
+
+
+def _mock_body_poses() -> np.ndarray:
+    """Return a finite, static Unity-frame T-pose for sim-only pipeline tests."""
+
+    poses = np.zeros((24, 7), dtype=np.float32)
+    poses[:, 1] = 1.0
+    poses[:, 6] = 1.0  # scalar-last identity quaternion
+    poses[0, :3] = (0.0, 1.0, 0.0)       # pelvis
+    poses[12, :3] = (0.0, 1.45, 0.0)     # neck
+    poses[15, :3] = (0.0, 1.68, 0.0)     # head
+    poses[22, :3] = (-0.65, 1.42, 0.0)   # left wrist
+    poses[23, :3] = (0.65, 1.42, 0.0)    # right wrist
+    return poses
+
+
 def _startup_log(prefix: str, message: str):
     print(f"[{prefix}] {message}", flush=True)
 
@@ -113,6 +131,30 @@ def _xrt_service_environment(service_dir: Path) -> dict[str, str]:
     ]
     env["QT_PLUGIN_PATH"] = ":".join(path for path in plugin_paths if path)
     env["QT_QML_PATH"] = ":".join(path for path in qml_paths if path)
+
+    # Keep compatibility preloads scoped to RoboticsServiceProcess. Setting
+    # LD_PRELOAD on the ROS controller would also inject the library into
+    # Python, MuJoCo and every launch child.
+    service_preload = env.get("SONIC_XRT_LD_PRELOAD", "").strip()
+    if service_preload:
+        preload_paths = [
+            Path(value).expanduser().absolute()
+            for value in service_preload.split(os.pathsep)
+            if value
+        ]
+        missing = [path for path in preload_paths if not path.is_file()]
+        if missing:
+            raise FileNotFoundError(
+                "SONIC_XRT_LD_PRELOAD file does not exist: "
+                + ", ".join(str(path) for path in missing)
+            )
+        inherited_preload = env.get("LD_PRELOAD", "")
+        rendered = [str(path) for path in preload_paths]
+        if inherited_preload:
+            rendered.extend(
+                value for value in inherited_preload.split(os.pathsep) if value
+            )
+        env["LD_PRELOAD"] = os.pathsep.join(dict.fromkeys(rendered))
     return env
 
 
@@ -123,6 +165,8 @@ def _start_xrt_service(prefix: str) -> subprocess.Popen:
 
     service_dir = service_executable.parent
     _startup_log(prefix, f"Starting roboticsservice directly: {service_executable}")
+    if os.environ.get("SONIC_XRT_LD_PRELOAD", "").strip():
+        _startup_log(prefix, "Applying RoboticsService socket compatibility preload")
     service_proc = subprocess.Popen(
         [str(service_executable)],
         cwd=str(service_dir),
@@ -728,6 +772,17 @@ def get_face_buttons():
 
 def get_abxy_buttons():
     """Fetch A,B,X,Y face buttons as booleans (a,b,x,y)."""
+    if _env_enabled("SONIC_PICO_MOCK"):
+        started_at = getattr(get_abxy_buttons, "_mock_started_at", None)
+        if started_at is None:
+            started_at = time.monotonic()
+            get_abxy_buttons._mock_started_at = started_at
+        elapsed = time.monotonic() - started_at
+        if 0.50 <= elapsed < 0.80:
+            return True, True, True, True
+        if 1.50 <= elapsed < 1.80:
+            return True, False, True, False
+        return False, False, False, False
     if xrt is None:
         return False, False, False, False
     try:
@@ -848,6 +903,38 @@ class PicoReader:
             return self._latest
 
     def _run(self):
+        if _env_enabled("SONIC_PICO_MOCK"):
+            print(
+                "[PicoReader] SIM-ONLY MOCK body stream enabled; data is synthetic "
+                "and must never be used for dataset collection",
+                flush=True,
+            )
+            body_poses = _mock_body_poses()
+            period_s = 0.02
+            frame_index = 0
+            next_frame = time.monotonic()
+            while not self._stop.is_set():
+                now_monotonic = time.monotonic()
+                if now_monotonic < next_frame:
+                    self._stop.wait(next_frame - now_monotonic)
+                    continue
+                frame_index += 1
+                stamp_ns = time.time_ns()
+                sample = {
+                    "body_poses_np": body_poses.copy(),
+                    "timestamp_realtime": time.time(),
+                    "timestamp_monotonic": now_monotonic,
+                    "timestamp_ns": stamp_ns,
+                    "dt": period_s,
+                    "fps": 50.0,
+                    "mock_frame_index": frame_index,
+                }
+                with self._lock:
+                    self._latest = sample
+                self._body_available = True
+                self._last_stamp_ns = stamp_ns
+                next_frame += period_s
+            return
         while not self._stop.is_set():
             try:
                 body_available = bool(xrt.is_body_data_available())
@@ -1347,9 +1434,6 @@ class PoseStreamer:
         self.next_target_ns = None
         self.frame_start = time.time()
 
-        # Data collection button state tracking (edge-triggered)
-        self.toggle_data_collection_last = False
-        self.toggle_data_abort_last = False
 
         self.buffer_cleared = (
             True  # Start with buffer cleared - wait for full buffer before first send
@@ -1393,21 +1477,6 @@ class PoseStreamer:
         (left_menu_button, left_trigger, right_trigger, left_grip, right_grip) = (
             get_controller_inputs()
         )
-        # Get A and B button states for data collection control
-        a_pressed, b_pressed, x_pressed, y_pressed = get_abxy_buttons()
-
-        # Data collection toggle logic (edge-triggered)
-        # Left grip + A = toggle_data_collection
-        # Left grip + B = toggle_data_abort
-        toggle_data_collection_tmp = a_pressed and left_grip > 0.5
-        toggle_data_abort_tmp = b_pressed and left_grip > 0.5
-
-        # Detect rising edge
-        toggle_data_collection = toggle_data_collection_tmp and not self.toggle_data_collection_last
-        toggle_data_abort = toggle_data_abort_tmp and not self.toggle_data_abort_last
-        self.toggle_data_collection_last = toggle_data_collection_tmp
-        self.toggle_data_abort_last = toggle_data_abort_tmp
-
         left_hand_joints, right_hand_joints = compute_hand_joints_from_inputs(
             self.left_hand_ik_solver,
             self.right_hand_ik_solver,
@@ -1579,8 +1648,6 @@ class PoseStreamer:
                 ),
                 "left_hand_joints": left_hand_joints.reshape(-1).astype(np.float32),
                 "right_hand_joints": right_hand_joints.reshape(-1).astype(np.float32),
-                "toggle_data_collection": np.array([toggle_data_collection], dtype=bool),
-                "toggle_data_abort": np.array([toggle_data_abort], dtype=bool),
                 "heading_increment": np.array(
                     [self.yaw_accumulator.yaw_angle_change()], dtype=np.float32
                 ),
@@ -1987,10 +2054,17 @@ def run_pico_manager(
     Controller input:
       A+X: Toggle between planner and pose mode
       A+B+X+Y: Toggle policy start/stop
+      Left grip+A: Start/save collection; left grip+B: discard
     """
     if xrt is None:
         raise ImportError(
             "XRoboToolkit SDK not available. Install xrobotoolkit_sdk to run the manager."
+        )
+    if _env_enabled("SONIC_PICO_MOCK"):
+        print(
+            "[Manager] WARNING: SONIC_PICO_MOCK=1; synthetic body and button "
+            "events are enabled for sim pipeline diagnosis only",
+            flush=True,
         )
     stop_event = stop_event or threading.Event()
     xrt_session = _start_xrt_session("Manager", stop_event=stop_event)
@@ -2066,7 +2140,8 @@ def run_pico_manager(
     #   POSE_PAUSE: left_menu_button held --> POSE_PAUSE, released --> POSE
     #
     print(
-        "Manager controls: A+X=toggle mode, A+B+X+Y=start/stop policy",
+        "Manager controls: A+X=toggle mode, A+B+X+Y=start/stop policy, "
+        "Left grip+A=start/save, left grip+B=discard",
         flush=True,
     )
     current_mode = StreamMode.OFF
@@ -2141,6 +2216,11 @@ def run_pico_manager(
                         if three_point.calibrate_now(sample["body_poses_np"]):
                             calibration_requested = False
                             new_mode = StreamMode.PLANNER
+                            print(
+                                "[Manager] Calibration complete; release all face "
+                                "buttons, then press A+X to enter live POSE",
+                                flush=True,
+                            )
                     else:
                         now = time.monotonic()
                         if (
@@ -2176,6 +2256,22 @@ def run_pico_manager(
                             )
                             last_calibration_wait_log = now
 
+                if combo.ax_rising:
+                    if calibration_requested:
+                        print(
+                            "[Manager] A+X ignored: calibration is still waiting "
+                            "for a fresh PICO body frame. Enable Body Tracking and "
+                            "press Send in the headset app; after calibration "
+                            "completes, release the buttons and press A+X again",
+                            flush=True,
+                        )
+                    else:
+                        print(
+                            "[Manager] A+X ignored: first press A+B+X+Y to request "
+                            "calibration",
+                            flush=True,
+                        )
+
             elif current_mode == StreamMode.PLANNER:
                 # Chain 2: POSE <--(ax)--> PLANNER <--(left_axis_click)--> VR_3PT
                 if combo.start_rising:
@@ -2190,8 +2286,6 @@ def run_pico_manager(
                     new_mode = StreamMode.OFF
                 elif combo.ax_rising:
                     new_mode = StreamMode.PLANNER  # Enter chain 2
-                elif combo.by_rising:
-                    new_mode = StreamMode.PLANNER_FROZEN_UPPER_BODY  # Enter chain 1
                 elif left_menu_button:
                     new_mode = StreamMode.POSE_PAUSE
 
@@ -2283,8 +2377,20 @@ def run_pico_manager(
                 current_mode = new_mode
 
             # Mode-independent: send manager_state for data exporter
-            toggle_dc_tmp = bool(a_pressed) and left_grip_mgr > 0.5
-            toggle_da_tmp = bool(b_pressed) and left_grip_mgr > 0.5
+            toggle_dc_tmp = (
+                bool(a_pressed)
+                and not b_pressed
+                and not x_pressed
+                and not y_pressed
+                and left_grip_mgr > 0.5
+            )
+            toggle_da_tmp = (
+                bool(b_pressed)
+                and not a_pressed
+                and not x_pressed
+                and not y_pressed
+                and left_grip_mgr > 0.5
+            )
             toggle_dc = toggle_dc_tmp and not prev_toggle_dc
             toggle_da = toggle_da_tmp and not prev_toggle_da
             prev_toggle_dc = toggle_dc_tmp

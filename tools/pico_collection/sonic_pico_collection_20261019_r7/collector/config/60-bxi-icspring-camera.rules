@@ -1,0 +1,3 @@
+# Keep the two wrist cameras accessible to the normal robot operator account.
+# Their identical hardware serials are intentionally disambiguated by /dev/v4l/by-path.
+SUBSYSTEM=="video4linux", ATTRS{idVendor}=="32e6", ATTRS{idProduct}=="9251", GROUP:="plugdev", MODE:="0660", TAG+="uaccess"

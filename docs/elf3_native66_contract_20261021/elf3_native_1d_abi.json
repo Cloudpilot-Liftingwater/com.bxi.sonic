@@ -1,0 +1,115 @@
+{
+  "format_version": 1,
+  "status": "REAL_MOTOR_COORDINATES_OFFLINE_EXPORT_VERIFIED_FIELD_COLLECTION_PENDING",
+  "lineage": {
+    "layout_source": "Isaac-GR00T/examples/ELF3/native_1d",
+    "coordinate_change": "Use actual motor radians, never simulation opening coordinates",
+    "legacy_simulation_assets_modified": false
+  },
+  "frequency_hz": 50,
+  "action_horizon": 40,
+  "execution_horizon_default": 20,
+  "embodiment_tag": "ELF3_NATIVE_1D",
+  "embodiment_value": "elf3_native_1d",
+  "projector_slot": 14,
+  "model_state_dimension": 34,
+  "stored_state_dimension": 31,
+  "stored_wbc_dimension": 31,
+  "model_action_dimension": 66,
+  "video": {
+    "ego_view": {
+      "original_key": "observation.images.ego_view"
+    },
+    "left_wrist": {
+      "original_key": "observation.images.left_wrist"
+    },
+    "right_wrist": {
+      "original_key": "observation.images.right_wrist"
+    }
+  },
+  "state": {
+    "waist": {
+      "dim": 3,
+      "unit": "rad",
+      "original_key": "observation.state"
+    },
+    "left_leg": {
+      "dim": 6,
+      "unit": "rad",
+      "original_key": "observation.state"
+    },
+    "right_leg": {
+      "dim": 6,
+      "unit": "rad",
+      "original_key": "observation.state"
+    },
+    "left_arm": {
+      "dim": 7,
+      "unit": "rad",
+      "original_key": "observation.state"
+    },
+    "right_arm": {
+      "dim": 7,
+      "unit": "rad",
+      "original_key": "observation.state"
+    },
+    "left_gripper": {
+      "dim": 1,
+      "unit": "rad",
+      "original_key": "observation.state"
+    },
+    "right_gripper": {
+      "dim": 1,
+      "unit": "rad",
+      "original_key": "observation.state"
+    },
+    "projected_gravity": {
+      "dim": 3,
+      "unit": "unit_vector",
+      "original_key": "observation.projected_gravity"
+    }
+  },
+  "action": {
+    "motion_token": {
+      "dim": 64,
+      "representation": "ABSOLUTE",
+      "original_key": "action.motion_token"
+    },
+    "left_gripper": {
+      "dim": 1,
+      "representation": "ABSOLUTE",
+      "original_key": "action.wbc",
+      "unit": "rad"
+    },
+    "right_gripper": {
+      "dim": 1,
+      "representation": "ABSOLUTE",
+      "original_key": "action.wbc",
+      "unit": "rad"
+    }
+  },
+  "derivation": {
+    "body_rule": "copy raw indices 0:29; omit optional head slots",
+    "state_gripper_rule": "copy independently measured left/right motor position_rad",
+    "action_gripper_rule": "copy left/right final transmitted command.position in radians",
+    "media_rule": "write self-contained H264 videos, one frame per training row"
+  },
+  "checkpoint_policy": {
+    "fresh_training_source": "clean GR00T-N1.7-3B base model",
+    "legacy_step10000_direct_reuse": false,
+    "legacy_slot_copy": false,
+    "inference_requires_native_checkpoint_identity": true,
+    "coordinate_policy": "Train/normalize with this dataset's motor-radian statistics. Same tag and shape alone do not make simulated-coordinate checkpoints compatible."
+  },
+  "sonic_decoder": {
+    "checkpoint_step": 28800,
+    "token_dim": 64,
+    "proprioception_dim": 930,
+    "input_dim": 994,
+    "output_dim": 29,
+    "grippers_bypass_sonic": true
+  },
+  "gripper_coordinate": "absolute_motor_radians",
+  "gripper_position_unit": "rad",
+  "frequency_scope": "Existing ELF3 project timebase, not a universal GR00T requirement"
+}
