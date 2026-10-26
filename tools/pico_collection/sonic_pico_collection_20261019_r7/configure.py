@@ -6,11 +6,11 @@ import yaml
 from real_robot_collection.gripper_identity import identities
 from delivery_paths import data_root, site
 
-COLLECTOR_RELEASE = "20261021-collection-14-official-session"
+COLLECTOR_RELEASE = "20261022-collection-16-opening-mm"
 
 ROOT = Path(__file__).resolve().parent
 PORTS = site()['wrist_usb_ports']
-FIXED_CAMERA_SHA256 = 'f9fd906092b666bf017898928c19d1f6e3240dad1a5ffbbe54138e63fdeb11ee'
+FIXED_CAMERA_SHA256 = '513f7143ccbb376d92350ef28ab084e340e3c2bb840cafdf7c6874283a2e9c76'
 
 
 def add_gripper_arguments(parser):
@@ -59,7 +59,7 @@ def configuration(left='dm', right='dm', left_id=None, right_id=None, *, left_bu
         sample_selection='latest_received_v1' if profile == 'sonic50_latest_rgb' else 'legacy_source_match',
         camera_left_right_verified=site()['camera_roles_confirmed'], physical_ports=dict(PORTS),
         camera_role_evidence=site()['camera_role_evidence'],
-        notes='Raw source with explicit DM/BXI identity and actual motor radians; offline training export validates complete saved data.')
+        notes='Raw source with explicit DM/BXI identity and BXI gripper opening mm (DM remains radians in its own contract); offline training export validates complete saved data.')
     task = site().get('training_task', '').strip()
     if task:
         cfg['dataset']['tasks'][0]['instruction'] = task

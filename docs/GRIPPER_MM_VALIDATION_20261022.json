@@ -1,0 +1,35 @@
+{
+  "release": "20261022-mm-01",
+  "hardware_validated": false,
+  "robot_modified": false,
+  "controller_tests": 11,
+  "contract_tests": 4,
+  "ingress_regressions": 5,
+  "mm_telemetry_tests": 2,
+  "groot_regressions": 55,
+  "native_golden_frame": "71c67ff6660cc7ff",
+  "synthetic_cleanup": {
+    "input_episodes": 2,
+    "discarded_removed": 1,
+    "zero_rows_removed": 10,
+    "kept_rows": 110
+  },
+  "official_loader": {
+    "state_shape": [
+      1,
+      34
+    ],
+    "action_shape": [
+      40,
+      66
+    ],
+    "decoded_images": 330,
+    "training_windows": 71,
+    "mm_normalization_roundtrip": true
+  },
+  "training_run": false,
+  "old_data_modified": false,
+  "groot_skipped": 1,
+  "installer_tests": 2,
+  "validation_note": "Full ELF3 suite: 55 passed/1 skipped; new mm contract tests included. Native golden/STREAM check and real official writer/loader also passed."
+}

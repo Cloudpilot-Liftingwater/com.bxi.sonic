@@ -6,6 +6,9 @@ from pathlib import Path
 from delivery_inventory import REPO, files
 
 REQUIRED = [
+ 'tools/collection_review/download.py', 'tools/collection_review/review.py',
+ 'tools/collection_review/export_all.py', 'tools/collection_review/validate_exports.py',
+ 'tools/camera_clock/build.py', 'tools/camera_clock/vendor/usb_cam-0.8.1/src/usb_cam.cpp',
  'tools/gr00t_dataset/contract.py', 'tools/gr00t_dataset/elf3_native_1d_config.py',
  'tools/gr00t_dataset/elf3_native_1d_abi.json', 'tools/gr00t_dataset/modality.json',
  'tools/gr00t_dataset/export_dataset.py', 'tools/gr00t_dataset/validate_official.py',
@@ -21,6 +24,7 @@ REQUIRED = [
  'assets/sonic_action_token.onnx', 'assets/stream_reference.npz',
  'pico/gear_sonic/data/human/human_joints_info.npz',
  'pico/manager_launcher.py', 'pico/pose_to_smpl_ref_bridge.py', 'pico/streamed_smpl_ref.py',
+ 'bxi_gripper_protocol.py', 'bxi_gripper_mm.json',
  'bxi_demo.py', 'bxi_demo_native.so', 'gripper.py', 'collection_telemetry.py',
  'runtime/linux-x86_64/roboticsservice/RoboticsServiceProcess',
  'runtime/linux-x86_64/roboticsservice/SDK/x64/libPXREARobotSDK.so',
@@ -34,6 +38,9 @@ REQUIRED += [R7+p for p in ('listen.sh','start.sh','environment.sh','configure.p
  'collector/check_config.py','collector/config/left_wrist_usb.yaml','collector/config/right_wrist_usb.yaml',
  'official_node.py','official_session.py','resident_launcher.py','sonic_collection_vendor/recording_commands.py')]
 ACTIVE = [R7+p for p in ('environment.sh','configure.py','delivery_paths.py','resident_launcher.py','official_node.py','official_session.py')]
+ACTIVE += ['tools/collection_review/download.py', 'tools/collection_review/review.py',
+           'tools/collection_review/export_all.py', 'tools/collection_review/validate_exports.py',
+           'tools/camera_clock/build.py']
 ACTIVE += ['tools/customer/environment.sh','tools/customer/record_tracking.sh','tools/tracking_eval/recording/record.py']
 
 def check():
@@ -53,7 +60,7 @@ def check():
         for private in ('/home/bxi/', '/home/huangchenwei/', '/data/ros2_ws/'):
             if private in (REPO/name).read_text(): errors.append('private active path: '+name)
     library = REPO/'tools/customer/runtime/ros_humble_x86_64/lib/libusb_cam.so'
-    if library.is_file() and hashlib.sha256(library.read_bytes()).hexdigest() != 'f9fd906092b666bf017898928c19d1f6e3240dad1a5ffbbe54138e63fdeb11ee':
+    if library.is_file() and hashlib.sha256(library.read_bytes()).hexdigest() != '513f7143ccbb376d92350ef28ab084e340e3c2bb840cafdf7c6874283a2e9c76':
         errors.append('clock-corrected usb_cam hash mismatch')
     print(json.dumps(dict(status='FAIL' if errors else 'PASS', checked_files=len(manifest['files']),
                          errors=errors, hardware_commands=0), ensure_ascii=False))

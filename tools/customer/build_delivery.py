@@ -17,14 +17,12 @@ if __name__ == '__main__':
     output=a.output_dir.expanduser().resolve()
     if output == REPO or REPO in output.parents: raise SystemExit('output must be outside source repo')
     output.mkdir(parents=True,exist_ok=True)
-    target=output/'sonic_customer_20261020_official_writer_v7.tar.gz'
+    target=output/'sonic_customer_20261026_mm_v16_camera_tools.tar.gz'
     if target.exists(): raise SystemExit('refusing to overwrite '+str(target))
     inventory={}
     selected=files()
     included={p.relative_to(REPO).as_posix() for p in selected}
-    overrides={'README.md': (REPO/'tools/customer/README.md').read_bytes()
-               .replace(b'../../docs/', b'docs/')
-               .replace(b'../gr00t_dataset/', b'tools/gr00t_dataset/')}
+    overrides={}
     for checksum in sorted((p for p in selected if p.name=='SHA256SUMS'),key=lambda p:len(p.parts),reverse=True):
         lines=[]
         for line in checksum.read_text().splitlines():
@@ -48,7 +46,7 @@ if __name__ == '__main__':
             if data[:4]==b'\x7fELF' and not src.name.endswith('.so'): info.mode=0o755
             info.size=len(data);tar.addfile(info,io.BytesIO(data))
             inventory[name]=hashlib.sha256(data).hexdigest()
-        data=(json.dumps(dict(release='20261020-customer-official-writer-07',files=inventory),indent=2)+'\n').encode()
+        data=(json.dumps(dict(release='20261026-mm-v16-camera-tools',files=inventory),indent=2)+'\n').encode()
         info=tarfile.TarInfo('com.bxi.sonic/tools/customer/DELIVERY_MANIFEST.json');info.size=len(data);info.mode=0o644
         tar.addfile(info,io.BytesIO(data))
     digest=hashlib.file_digest(target.open('rb'),'sha256').hexdigest() if hasattr(hashlib,'file_digest') else hashlib.sha256(target.read_bytes()).hexdigest()

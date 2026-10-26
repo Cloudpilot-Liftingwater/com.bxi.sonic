@@ -1,80 +1,35 @@
-# SONIC / ELF3 test-01
+# SONIC / ELF3
 
-本库包含 **2026-10-20 test-01真机基线** 的SONIC运行源码、模型、夹爪程序，以及后续完善的采集和跟踪评测工具。客户从[交付入口](tools/customer/README.md)配置外部ROS/example环境；运行资源随库提供，不依赖开发工作站路径。
+当前发布整理：**20261026-mm-v16-camera-tools**。集成已现场使用的SONIC输入管理、BXI毫米夹爪demo04、官方数采v16、跟踪评测，以及已现场核对的相机时钟补丁。
 
-**验证范围：** 身体输入管理、A+X保持/恢复、BXI夹爪及跟踪记录链路已有真机验证；当前数采 `20261021-collection-14-official-session` 已通过离线检查，仍待本轮真机安装和采集验收。上传代码不代表机器人已安装该版本。
-
-## 当前功能与版本
-
-| 项目 | 当前基线 |
+| 功能 | 当前行为 |
 |---|---|
-| 身体输入 | playout-01：完整连续10帧窗口；推理成功后才消费；重复帧不刷新输入新鲜度；断流保留参考 |
-| A+X | 切出POSE保留最后人体参考，SONIC继续闭环；切回有效POSE恢复跟随 |
-| BXI夹爪 | demo03；左扳机→CAN5，右扳机→CAN6；每侧独立使能/等待反馈 |
-| 夹爪位置 | 电机绝对角度：闭合0°、打开300°；入口打开后接扳机；退出停止发送 |
-| 夹爪参数 | KP25、KD0.25、最大速度1400°/s、加速度28000°/s²；不重新寻零，不由BXI故障请求全身零力矩 |
-| 模型/采集输出 | `assets/sonic_action_token.onnx`，29身体关节输出及64维motion_token；夹爪遥测接口已包含 |
-| 任务采集 | v14：在线官方MP4/Parquet写入；A+X暂停恢复同一episode，清理后训练窗口可跨接缝 |
-| 跟踪评测 | v4观察点已包含；记录器+v2参考重建/误差报告保留在tools/tracking_eval |
+| SONIC输入 | 完整连续10帧；成功推理后推进；断流保持参考 |
+| A+X | 切出POSE保持参考，切回恢复；官方清理后前后仍在同一episode |
+| BXI夹爪 | 左扳机→CAN5、右扳机→CAN6；使能后打开70mm，闭合0mm；KP2/KD0.05 |
+| 退出 | 停止发送夹爪命令；BXI故障不主动请求身体零力矩 |
+| 数采 | 官方MP4/Parquet写入、保存/弃用和清理；保留v15非阻塞接收 |
+| 训练合同 | 状态34维、动作66维；身体rad、夹爪开口mm；ELF3_NATIVE_1D/slot14 |
+| 相机时间 | 每次取帧更新单调时钟到墙钟的换算；保留真实内核帧时间 |
+| 跟踪评测 | 记录观察点、模型参考重建、指令/实际误差及报告 |
+| 下载与检查 | 全部/最近会话、续传、SHA256、三路视频页面、分段GR00T读取检查 |
 
-DM控制代码仍保留。`mod.yaml`里 `gripper_backend: bxi_demo` 选择当前BXI链路；其中大量旧 `gripper_kp` / 校准参数属于DM后端，**不控制BXI demo的25/0.25增益**。BXI原生源码及构建方法见 [gripper_native](tools/gripper_native/README.md)。
+## 使用入口
 
-## 常用入口
+- [客户部署与依赖配置](tools/customer/README.md)
+- [数采操作](tools/pico_collection/README.md)；[数据导出与训练检查](tools/gr00t_dataset/README.md)
+- [批量下载、人工检查、GR00T读取](tools/collection_review/README.md)
+- [跟踪精度评测](tools/tracking_eval/README.md)
+- [毫米协议与参数](docs/GRIPPER_MM_PROTOCOL_20261022.md)；[相机时钟补丁](tools/camera_clock/README.md)
+- [本次发布、验证边界及待处理问题](docs/RELEASE_20261026.md)
+- [维护与Git发布流程](docs/MAINTENANCE.md)
 
-- [真机基线、外部依赖、同步证据与限制](docs/FIELD_BASELINE_20261020.md)
-- [任务采集使用说明](tools/pico_collection/README.md)
-- [跟踪评测使用说明](tools/tracking_eval/README.md)
-- [历史现场采集服务配置：左5/右6](tools/pico_collection/field_test01_20261020/README.md)
+## 验证状态
 
-客户使用[本机记录和离线评估入口](tools/customer/README.md#跟踪记录及离线评估)。test-01维护者也可在工作站使用历史SSH便捷入口，并显式指定机器人当前地址：
+10月22日毫米版现场完成两次保存、两次弃用，保存/弃用各一次暂停续采；后续还验证了VLA手柄进入SONIC后的采集。10月23日双腕相机报告确认新库已加载，旧约565ms时钟偏差消失，内核帧时间到接收仍约129ms。5条历史毫米测试数据已清理导出并通过GR00T首/中/尾40步窗口读取及归一化检查；没有运行模型后训练。
 
-```bash
-cd /实际路径/com.bxi.sonic
-SONIC_EVAL_HOST=bxi@机器人当前IP bash tools/tracking_eval/tracking_eval.sh --record 120
-```
+**尚未解决：** 数采相机/记录器退出会结束监听器；现场服务配置不自动重启。10月23日晚无新录制。当前发布没有修改服务恢复策略，不能把过去保存成功当作无人看守可靠性验收。开始正式任务前确认服务存活、RECORDING及帧数增长；完成后确认saved结果及文件。
 
-这只记录已运行控制器的数据，120秒后自动结束并生成HTML；不需要相机。它不启动机器人或任务采集监听器。原始数据、模型重建参考、控制目标、最终指令和实测角度分层保存；没有全局真值的项目仍标为不可测。
+本库是Mod API 4插件，example宿主、basic_actions、ROS2及Python依赖为显式外部依赖。库内包含模型、PICO资源、夹爪源码/运行库、数采、合同和评测工具。客户入口按库位置和站点配置找文件，不依赖开发机目录。
 
-## 配套工作区
-
-- 外部example宿主提供Mod API 4、basic_actions、ROS通信消息及机器人I/O。
-- 数采与评测的项目源码、原生运行资源、模型和合同均在本库；部署位置由站点配置指定。
-- 工作站原始快照、历史库名和同步证据见[工作区导引](docs/WORKSPACE_GUIDE_20261020.md)，它们不是客户运行依赖。
-
-这是Mod API 4插件，宿主、basic_actions、ROS2/Python环境由外部提供。复制源码不是安装或启动；工作站example原有build/install未在本轮重建，不能据此称工作站已经可直接启动真机。
-
-## 留存与验证范围
-
-[本次同步说明](docs/FIELD_BASELINE_20261020.md)列出实机证据、离线检查及未部署改动。原README和硬件文档保存于 `docs/history/`，仅供历史追溯，其旧夹爪/ZeroLab流程不代表当前test-01配置。本地未部署ZeroLab、额外检查代码和旧测试已从当前运行树移到同步前备份，未丢弃。
-
-跟踪工具已有15秒和120秒真机链路验证；身体暂停/恢复、夹爪使用及左右映射由操作员确认。旧采集版本已有有效数据和同session暂停/恢复记录，也出现过JPEG队列中断；这些历史结果不能代替v14的现场验收。
-
-## 客户交付与数据说明（2026-10-20 路径整理）
-
-客户使用 [交付入口](tools/customer/README.md)，不使用test-01专用远程安装器。已将采集相机配置、时间戳修正USB驱动和记录入口补为库内相对定位；外部仅显式配置ROS/example环境。此路径整理阶段未改r7采集核心和身体/夹爪控制算法；后续采集频率更新见下文，Python运行器恢复了保留venv路径的修正。此本地路径版尚未部署真机。
-
-- [三摄像头人工检查](docs/CAMERA_MANUAL_CHECK.md)
-- [逐文件、逐字段数据说明及仿真格式对照](docs/COLLECTION_DATA_FORMAT.md)
-- [原本地未部署改动清单](docs/LOCAL_UNDEPLOYED_CHANGES_20261020.md)
-- [交付范围与检查结果](docs/CUSTOMER_DELIVERY_20261020.md)
-
-## 2026-10-20：复用既有ELF3 Native 1DoF训练接口
-
-采用已有Isaac-GR00T的native_1d：身体29＋双爪2＝31自由度，不含头部关节；状态34维（含重力）、动作66维（token64＋双爪），ELF3_NATIVE_1D/slot14，50Hz。原modality和训练配置逐字节收入库内；ABI已按用户要求改为真实电机rad，没有新建embodiment。50Hz是本项目选择，非GR00T统一要求。
-
-- [本地六个资产目录的核查与选择](docs/LOCAL_VLA_REUSE_AUDIT_20261020.md)
-- [既有格式的逐项数据字典](docs/GR00T_N17_DATA_FORMAT.md)
-- [离线导出和已有训练入口](tools/gr00t_dataset/README.md)
-
-现场已测试v12（50Hz实际推理行），但四条均因旧JPEG队列满而中断。当前本地v14将官方写入器直接接入在线采集；复用30Hz最新图像，尚待部署真机。夹爪直接保存真实电机角，不再要求开度映射。因此training_export默认关闭；之前加入的头部训练方案已经撤回。原始采集和A+X同条暂停续采保留，身体和夹爪控制源码未改。本地离线验证见tools/gr00t_dataset/VALIDATION.json，不能当成真机训练数据验收。
-
-- [工作站各库目录导引](docs/WORKSPACE_GUIDE_20261020.md)
-
-- [任务文字标注、实测/目标区别与官方相机处理](docs/TASK_LABELING.md)
-
-当前待上机版本：`20261021-collection-14-official-session`。保存和弃用直接调用官方Gr00tDataExporter接口，在线不再启动旧JPEG队列。[在线采集与依赖安装说明](tools/gr00t_dataset/ONLINE_COLLECTION.md)。旧现场测试文档仅供历史追溯。
-
-
-数据保存优先复用官方：v14在线调用NVIDIA SONIC/LeRobot写入器；离线调用官方process_dataset清理和合并，训练统计使用GR00T官方函数；原自写Parquet/MP4/元数据写入逻辑已删除。ELF3 ROS取数、A+X同条暂停续采和既有训练配置保留。详细边界、官方代码来源及小补丁见[复用说明](docs/OFFICIAL_COLLECTION_REUSE_20261020.md)。工作站独立导出环境为`/data/ros2_ws/.venvs/sonic-data-export`；机器人未安装本版。
-
-本次v14还移除了每条重新启动采集进程、最低100行保存门槛、30ms匹配丢行、20ms时间格删帧。已统一GR00T默认训练合同为夹爪电机弧度，沿用官方开环评测入口；旧仿真资产不改单位。原生MP4不在导出时统一缩放，图像处理由模型Processor负责。详见[当前采集说明](tools/gr00t_dataset/ONLINE_COLLECTION.md)。
+旧弧度数据/统计/checkpoint不能重新标成mm后混用。冻结历史包不改写；当前完整发布仍须客户设备环境验收。

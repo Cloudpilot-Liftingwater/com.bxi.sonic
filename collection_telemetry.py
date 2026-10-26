@@ -12,14 +12,20 @@ def decode_command(data, profile):
         raise ValueError("MIT command must have 8 bytes")
     def scale(value, limits, bits):
         return limits[0] + value * (limits[1] - limits[0]) / ((1 << bits) - 1)
-    return {
+    result = {
         "position": scale((b[0] << 8) | b[1], profile.position_range, 16),
         "velocity": scale((b[2] << 4) | (b[3] >> 4), profile.velocity_range, 12),
-        "kp": scale(((b[3] & 15) << 8) | b[4], (0, 500), 12),
-        "kd": scale((b[5] << 4) | (b[6] >> 4), (0, 5), 12),
+        "kp": scale(((b[3] & 15) << 8) | b[4], getattr(profile, 'kp_range', (0, 500)), 12),
+        "kd": scale((b[5] << 4) | (b[6] >> 4), getattr(profile, 'kd_range', (0, 5)), 12),
         "feedforward": scale(((b[6] & 15) << 8) | b[7], profile.torque_range, 12),
         "can_data": list(b),
     }
+    if getattr(profile, 'position_unit', 'rad') == 'mm':
+        if (((b[6] & 15) << 8) | b[7]) in (0x7FF, 0x800):
+            result['feedforward'] = 0.0  # Firmware special-cases both zero force encodings.
+        result.update(position_mm=result['position'], velocity_mm_s=result['velocity'], force_n=result['feedforward'], position_unit='mm', effort_unit='N')
+    return result
+
 
 
 def gripper_snapshot(state, commands, now):
@@ -47,21 +53,26 @@ def gripper_snapshot(state, commands, now):
                                               item.velocity, item.torque)) or abs(closed-opened) < .1:
             return None
         trigger, trigger_at, _ = cycle['inputs'][side]
-        samples.append({
+        sample = {
             "side": side, "bus": bus, "motor_id": profile.can_id,
             "protocol": profile.protocol.value,
-            "profile": "bxi_colleague_rad_v1" if profile.protocol.value == "bxi" else "dm_follow8",
-            "position_unit": "rad", "effort_unit": "Nm",
-            "position_rad": item.position, "velocity_rad_s": item.velocity,
-            "torque_nm": item.torque, "feedback_monotonic": item.received_at,
-            "open_rad": opened, "closed_rad": closed,
+            "profile": getattr(profile, "profile", "dm_follow8"),
+            "position_unit": getattr(profile, "position_unit", "rad"), "effort_unit": getattr(profile, "effort_unit", "Nm"),
+            "feedback_monotonic": item.received_at,
             "closure_fraction": (item.position-opened)/(closed-opened),
             "command_closure_fraction": (command["position"]-opened)/(closed-opened),
             "trigger": trigger,
             "trigger_monotonic": trigger_at,
             "control": dict(cycle['sides'][bus]),
             "command": dict(command),
-        })
+        }
+        if sample['position_unit'] == 'mm':
+            sample.update(opening_mm=item.position, velocity_mm_s=item.velocity, force_n=item.torque,
+                          open_mm=opened, closed_mm=closed)
+        else:
+            sample.update(position_rad=item.position, velocity_rad_s=item.velocity, torque_nm=item.torque,
+                          open_rad=opened, closed_rad=closed)
+        samples.append(sample)
     reasons = []
     if cycle['exiting'] or state._gripper_exit_started_at is not None:
         reasons.append('exit_closing')
@@ -79,10 +90,14 @@ def gripper_snapshot(state, commands, now):
             reasons.append(f'{side}_control_inactive')
         if s['control']['mode'] == 'blocked_hold':
             reasons.append(f'{side}_blocked_hold')
-    return {"schema": 1, "monotonic": now, "training_eligible": not reasons,
+    is_mm = all(x["position_unit"] == "mm" for x in samples)
+    result = {"schema": 2 if is_mm else 1, "monotonic": now, "training_eligible": not reasons,
             "ineligible_reasons": reasons, "control_monotonic": cycle['monotonic'],
-            "coordinate": "raw_motor_rad_and_soft_limit_closure_fraction",
+            "coordinate": "absolute_gripper_opening" if all(x['position_unit']=='mm' for x in samples) else "raw_motor_rad_and_soft_limit_closure_fraction",
             "samples": samples}
+    if is_mm:
+        result["contract_id"] = "elf3_native66_bxi_opening_mm_v2"
+    return result
 
 
 class CollectionTelemetry:

@@ -1,9 +1,9 @@
 {
-  "format_version": 1,
-  "status": "REAL_MOTOR_RADIANS_CONTRACT",
+  "format_version": 2,
+  "status": "IMPLEMENTED_NOT_HARDWARE_VALIDATED",
   "lineage": {
     "layout_source": "Isaac-GR00T/examples/ELF3/native_1d",
-    "coordinate_change": "Use actual motor radians, never simulation opening coordinates",
+    "coordinate_change": "Actual firmware gripper opening in mm; motor-radian v1 is not compatible by relabeling",
     "legacy_simulation_assets_modified": false
   },
   "frequency_hz": 50,
@@ -55,12 +55,12 @@
     },
     "left_gripper": {
       "dim": 1,
-      "unit": "rad",
+      "unit": "mm",
       "original_key": "observation.state"
     },
     "right_gripper": {
       "dim": 1,
-      "unit": "rad",
+      "unit": "mm",
       "original_key": "observation.state"
     },
     "projected_gravity": {
@@ -79,19 +79,19 @@
       "dim": 1,
       "representation": "ABSOLUTE",
       "original_key": "action.wbc",
-      "unit": "rad"
+      "unit": "mm"
     },
     "right_gripper": {
       "dim": 1,
       "representation": "ABSOLUTE",
       "original_key": "action.wbc",
-      "unit": "rad"
+      "unit": "mm"
     }
   },
   "derivation": {
     "body_rule": "copy raw indices 0:29; omit optional head slots",
-    "state_gripper_rule": "copy independently measured left/right motor position_rad",
-    "action_gripper_rule": "copy left/right final transmitted command.position in radians",
+    "state_gripper_rule": "copy independently measured left/right opening_mm",
+    "action_gripper_rule": "copy left/right actual transmitted command.position_mm",
     "media_rule": "Preserve native camera dimensions; official Processor transforms at model input"
   },
   "checkpoint_policy": {
@@ -99,7 +99,7 @@
     "legacy_step10000_direct_reuse": false,
     "legacy_slot_copy": false,
     "inference_requires_native_checkpoint_identity": true,
-    "coordinate_policy": "Train/normalize with this dataset's motor-radian statistics. Same tag and shape alone do not make simulated-coordinate checkpoints compatible."
+    "coordinate_policy": "Require v2 contract identity and mm dataset statistics; no direct reuse of motor-radian checkpoints"
   },
   "sonic_decoder": {
     "checkpoint_step": 28800,
@@ -109,7 +109,16 @@
     "output_dim": 29,
     "grippers_bypass_sonic": true
   },
-  "gripper_coordinate": "absolute_motor_radians",
-  "gripper_position_unit": "rad",
-  "frequency_scope": "Existing ELF3 project timebase, not a universal GR00T requirement"
+  "gripper_coordinate": "absolute_gripper_opening",
+  "gripper_position_unit": "mm",
+  "frequency_scope": "Existing ELF3 project timebase, not a universal GR00T requirement",
+  "contract_id": "elf3_native66_bxi_opening_mm_v2",
+  "gripper_application_range_mm": [
+    0,
+    70
+  ],
+  "gripper_protocol_range_mm": [
+    0,
+    90
+  ]
 }

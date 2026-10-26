@@ -9,7 +9,6 @@ EXCLUDED_FILES = {
  R7+'collector/requirements-export.txt',  # legacy 33/mimic training interface
 
  'tools/customer/site.local.json', 'tools/customer/DELIVERY_MANIFEST.json',
- 'tools/customer/DELIVERY_VALIDATION.json',
  R7+'build.py', R7+'install_service.py', R7+'elf3_pico_collection.service',
  'tools/tracking_eval/tracking_eval.sh', 'tools/tracking_eval/recording/install.py',
  'tools/tracking_eval/recording/baseline_policy.py.txt', 'tools/tracking_eval/recording/legacy_policy.py.txt',
