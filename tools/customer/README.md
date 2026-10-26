@@ -23,6 +23,18 @@ source tools/customer/environment.sh
 
 设置环境不会启动机器人。SONIC按宿主的Mod流程加载mod.yaml；启动宿主也要使用同一环境，以选中库内XR服务。
 
+## PICO独立Python环境（不使用Conda）
+
+先在库根执行下面的安装。脚本用系统 `/usr/bin/python3` 创建隔离venv，从PyPI安装已现场使用的依赖版本；只验证依赖导入，不启动XR、ROS、相机或电机。
+
+```bash
+bash tools/customer/prepare_pico_runtime.sh
+```
+
+看到 `PICO_VENV_READY` 后，SONIC会自动选择 `.runtime/<平台>/pico/bin/python`。它也支持 `.venv` 或通过 `SONIC_PICO_PYTHON` 显式指定系统Python创建的venv；不再搜索/调用Conda，也拒绝从Conda Python创建的venv。当前预编译XR扩展要求Python3.10。
+
+不要把已有Conda的site-packages复制进venv。包管理器名称不能改变包的来源或许可证；本项目使用PyPI、官方PyTorch wheel源和随包固定LeRobot源码wheel。完整边界见[Python环境与依赖来源](../../docs/PYTHON_ENVIRONMENT.md)。
+
 ## 安装数采依赖与运行
 
 ```bash

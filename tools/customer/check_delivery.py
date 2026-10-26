@@ -6,6 +6,7 @@ from pathlib import Path
 from delivery_inventory import REPO, files
 
 REQUIRED = [
+ 'tools/customer/prepare_pico_runtime.sh', 'docs/PYTHON_ENVIRONMENT.md',
  'tools/collection_review/download.py', 'tools/collection_review/review.py',
  'tools/collection_review/export_all.py', 'tools/collection_review/validate_exports.py',
  'tools/camera_clock/build.py', 'tools/camera_clock/vendor/usb_cam-0.8.1/src/usb_cam.cpp',

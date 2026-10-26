@@ -16,7 +16,7 @@
 
 ## 使用入口
 
-- [客户部署与依赖配置](tools/customer/README.md)
+- [客户部署与依赖配置](tools/customer/README.md)；[系统Python / venv环境](docs/PYTHON_ENVIRONMENT.md)
 - [数采操作](tools/pico_collection/README.md)；[数据导出与训练检查](tools/gr00t_dataset/README.md)
 - [批量下载、人工检查、GR00T读取](tools/collection_review/README.md)
 - [跟踪精度评测](tools/tracking_eval/README.md)

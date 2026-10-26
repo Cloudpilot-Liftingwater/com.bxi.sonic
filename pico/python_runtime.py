@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 import shutil
@@ -82,8 +81,14 @@ def _clean_python_environment() -> dict[str, str]:
     """Remove every parent-Python control variable from the vendor process."""
     environment = os.environ.copy()
     for name in tuple(environment):
-        if name.startswith("PYTHON") or name == "__PYVENV_LAUNCHER__":
+        if name.startswith(("PYTHON", "CONDA", "_CONDA")) or name in ("__PYVENV_LAUNCHER__", "_CE_CONDA", "_CE_M"):
             environment.pop(name, None)
+    for name in ("PATH", "LD_LIBRARY_PATH"):
+        if name in environment:
+            # Remove inherited Conda binaries/libraries while preserving ROS/SDK paths.
+            paths = [p for p in environment[name].split(os.pathsep)
+                     if p and _conda_prefix(Path(p) / "_entry") is None]
+            environment[name] = os.pathsep.join(paths)
     # This is an environment assembled by SONIC, not inherited Python state.
     # Keep descendants from trying to create __pycache__ in a read-only Mod
     # installation.  The selected interpreter also receives ``-B`` because
@@ -138,51 +143,31 @@ def _unique_paths(values: Iterable[str | Path]) -> tuple[Path, ...]:
     return tuple(result)
 
 
+def _conda_prefix(path: Path) -> Path | None:
+    """Detect Conda installations, including venvs created from their Python."""
+    roots = list(dict.fromkeys((*path.absolute().parents, *path.resolve().parents)))
+    for root in tuple(roots):
+        config = root / "pyvenv.cfg"
+        if config.is_file():
+            for line in config.read_text().splitlines():
+                key, sep, value = line.partition("=")
+                if sep and key.strip() == "home":
+                    base = Path(value.strip()).expanduser().resolve()
+                    roots.extend((base, *base.parents))
+    return next((root for root in roots if (root / "conda-meta").is_dir()), None)
+
+
 def _common_candidates() -> tuple[Path, ...]:
-    home = Path.home()
     mod_runtime = _mod_root() / ".runtime" / runtime_platform_tag() / "pico"
-    values: list[str | Path] = [mod_runtime / "bin" / "python", sys.executable]
-    for variable in ("VIRTUAL_ENV", "CONDA_PREFIX"):
-        root = os.environ.get(variable)
-        if root:
-            values.append(Path(root) / "bin" / "python")
-    values.extend(
-        (
-            home / "miniconda3" / "bin" / "python",
-            home / "anaconda3" / "bin" / "python",
-            "python3",
-            "python",
-        )
-    )
-    return _unique_paths(values)
-
-
-def _conda_candidates() -> tuple[Path, ...]:
-    conda = shutil.which("conda")
-    if conda is None:
-        for candidate in (
-            Path.home() / "miniconda3" / "bin" / "conda",
-            Path.home() / "anaconda3" / "bin" / "conda",
-        ):
-            if candidate.is_file() and os.access(candidate, os.X_OK):
-                conda = str(candidate)
-                break
-    if conda is None:
-        return ()
-    try:
-        completed = subprocess.run(
-            (conda, "env", "list", "--json"),
-            check=True,
-            capture_output=True,
-            text=True,
-            timeout=10.0,
-        )
-        roots = json.loads(completed.stdout).get("envs", ())
-    except (OSError, subprocess.SubprocessError, ValueError, AttributeError):
-        return ()
-    if not isinstance(roots, list):
-        return ()
-    return _unique_paths(Path(root) / "bin" / "python" for root in roots)
+    values: list[str | Path] = [
+        mod_runtime / "bin" / "python", _mod_root() / ".venv" / "bin" / "python",
+        sys.executable,
+    ]
+    active = os.environ.get("VIRTUAL_ENV")
+    if active:
+        values.append(Path(active) / "bin" / "python")
+    values.extend(("/usr/bin/python3", "python3", "python"))
+    return tuple(p for p in _unique_paths(values) if _conda_prefix(p) is None)
 
 
 def _probe(
@@ -191,9 +176,14 @@ def _probe(
     *,
     vendor_directory: Path | None = None,
 ) -> tuple[bool, str]:
+    if _conda_prefix(interpreter) is not None:
+        return False, "Conda-based Python is not supported; run tools/customer/prepare_pico_runtime.sh"
     vendor_path = str(vendor_directory) if vendor_directory is not None else ""
     code = (
         "import importlib, sys\n"
+        "from pathlib import Path\n"
+        "if any((Path(p) / 'conda-meta').is_dir() for p in (sys.prefix, sys.base_prefix)):\n"
+        "    raise RuntimeError('Conda-based Python is not supported; use a system-Python venv')\n"
         f"vendor_path = {vendor_path!r}\n"
         "if vendor_path:\n"
         "    sys.path.insert(0, vendor_path)\n"
@@ -278,27 +268,16 @@ def select_python(
         return None
 
     # Search every user-managed environment before considering the bundled
-    # extension. This prevents a working pip/conda installation from being
+    # extension. This prevents a working pip/venv installation from being
     # shadowed merely because an earlier interpreter can use the fallback.
     selected = try_candidates(candidates, _ENVIRONMENT_BINDING)
     if selected is not None:
         return selected
-    conda_candidates: tuple[Path, ...] = ()
-    if not explicit:
-        conda_candidates = _conda_candidates()
-        selected = try_candidates(conda_candidates, _ENVIRONMENT_BINDING)
-        if selected is not None:
-            return selected
-
     bundled_directory = vendor_python_directory()
     if bundled_directory.is_dir():
         selected = try_candidates(candidates, _BUNDLED_BINDING)
         if selected is not None:
             return selected
-        if not explicit:
-            selected = try_candidates(conda_candidates, _BUNDLED_BINDING)
-            if selected is not None:
-                return selected
     else:
         failures.append(
             "  - bundled binding unavailable for target "
@@ -310,8 +289,9 @@ def select_python(
     raise RuntimeError(
         f"no Python interpreter can run SONIC {component}; required imports: "
         f"{', '.join(imports)}\nchecked:\n{checked}\n"
-        "Install the dependencies into one environment:\n"
-        f"  <python> -m pip install -r {requirements}\n"
+        "Create a system-Python venv (no Conda), then install the dependencies:\n"
+        f"  bash {_mod_root() / 'tools/customer/prepare_pico_runtime.sh'}\n"
+        f"  or <venv-python> -m pip install -r {requirements}\n"
         "Install xrobotoolkit_sdk into the selected environment, or use a target "
         "for which the Mod supplies the fallback binding at "
         f"{vendor_python_directory()}. Then set SONIC_PICO_PYTHON=<python> or "
@@ -324,7 +304,7 @@ def reexec_if_needed(component: str, imports: Sequence[str]) -> None:
     if current is None:
         current = Path(os.path.abspath(sys.executable))
     previously_selected = _resolve_python(os.environ.get(_SELECTED_PYTHON_ENV, ""))
-    if previously_selected == current:
+    if previously_selected == current and _conda_prefix(current) is None:
         if os.environ.get(_BINDING_SOURCE_ENV) == _BUNDLED_BINDING:
             activate_vendor_python()
         return
