@@ -6,7 +6,7 @@ from pathlib import Path
 
 import numpy as np
 
-from contract import ABI, FPS, HORIZON, JOINTS, SCHEMA, VECTOR_NAMES
+from contract import CONTRACT_ID, COORDINATE, POSITION_UNIT, ABI, FPS, HORIZON, JOINTS, SCHEMA, VECTOR_NAMES
 from elf3_native_1d_config import elf3_native_1d_config as CONFIG
 
 
@@ -24,10 +24,11 @@ def validate(path):
     path = Path(path).resolve(strict=True)
     info = json.loads((path / "meta/info.json").read_text())
     contract = json.loads((path / "meta/elf3_contract.json").read_text())
-    if (contract.get("gripper_coordinate") != "absolute_motor_radians"
-            or contract.get("gripper_position_unit") != "rad"
+    if (contract.get("gripper_coordinate") != COORDINATE
+            or contract.get("contract_id") != CONTRACT_ID
+            or contract.get("gripper_position_unit") != POSITION_UNIT
             or contract.get("joint_names") != JOINTS):
-        raise ValueError("Expected real motor radians; simulated opening coordinates are not this dataset")
+        raise ValueError("Expected gripper-mm contract v2; legacy motor radians are not interchangeable")
     if info["fps"] != FPS:
         raise ValueError("This ELF3 project uses 50 Hz; GR00T itself is not fixed to 50 Hz")
     if info["features"]["observation.state"]["shape"] != [31] or info["features"]["action.wbc"]["shape"] != [31]:
@@ -80,7 +81,7 @@ def validate(path):
         episodes=len(loader), decoded_video_frames=rows * 3, rows=rows,
         state_shape=[1, 34], action_shape=[HORIZON, 66], views=3,
         test_scope="official loader + CPU video decoding + statistics + training sampling + normalization",
-        sampler_steps=int(sum(dataset.shard_lengths)), motor_radian_normalization_roundtrip=True,
+        sampler_steps=int(sum(dataset.shard_lengths)), gripper_mm_normalization_roundtrip=True,
         pretrained_processor_run=False,
         finetuning_run=False, hardware_test=False,
     )

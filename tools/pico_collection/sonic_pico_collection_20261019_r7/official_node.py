@@ -13,7 +13,7 @@ import numpy as np
 import yaml
 import rclpy
 from rclpy.node import Node
-from rclpy.executors import MultiThreadedExecutor
+from rclpy.executors import SingleThreadedExecutor
 from rclpy.callback_groups import MutuallyExclusiveCallbackGroup
 from rclpy.qos import QoSProfile, ReliabilityPolicy, HistoryPolicy
 from communication.msg import ActuatorStates, ActuatorCmds
@@ -37,6 +37,9 @@ def stamp(msg):
 class Collector(Node):
     def __init__(self, cfg):
         super().__init__('elf3_official_collection')
+        if any(x.get('profile') != 'bxi_gripper_mm_v1' or x.get('position_unit') != 'mm'
+               for x in cfg['gripper']['expected_identities']):
+            raise ValueError('native66 mm recording requires both BXI mm profiles; DM/radian data needs its legacy contract')
         self.cfg=cfg
         self.session=OfficialSession(runs_root(),data_root(),cfg)
         self.cache={}
@@ -45,6 +48,7 @@ class Collector(Node):
         self.failure=None
         self.counts=Counter()
         self.last_inference=None
+        self.performance={}
         self.quit=threading.Event()
         self.groups=[]
         self.subscriptions_owned=[]
@@ -53,14 +57,16 @@ class Collector(Node):
         def sub(cls,topic,callback,qos=latest):
             group=MutuallyExclusiveCallbackGroup();self.groups.append(group)
             def guarded(msg):
-                try:callback(msg)
+                try:
+                    self.counts[topic]+=1
+                    callback(msg)
                 except Exception as exc:
                     self.counts['invalid:'+topic]+=1
                     self.get_logger().error(f'{topic}: {exc}',throttle_duration_sec=5)
             self.subscriptions_owned.append(self.create_subscription(cls,topic,guarded,qos,callback_group=group))
         robot=cfg['robot']
-        sub(ActuatorStates,robot['actuator_state_topic'],lambda m:self.put('state',self.body(m.position,m.name),stamp(m)))
-        sub(ActuatorCmds,robot['actuator_command_topic'],lambda m:self.put('command',self.body(m.pos,m.actuators_name),stamp(m)))
+        sub(ActuatorStates,robot['actuator_state_topic'],lambda m:self.put('state',m,stamp(m)))
+        sub(ActuatorCmds,robot['actuator_command_topic'],lambda m:self.put('command',m,stamp(m)))
         sub(Imu,robot['imu_topic'],self.imu)
         sub(String,cfg['gripper']['sample_topic'],self.gripper)
         sub(String,cfg['motion_token']['topic'],self.inference,reliable)
@@ -88,21 +94,22 @@ class Collector(Node):
             self.cache[key]=(value,float(source_time),time.monotonic())
 
     def imu(self,msg):
-        q=quaternion_multiply_wxyz([msg.orientation.w,msg.orientation.x,msg.orientation.y,msg.orientation.z],
-            self.cfg['robot']['imu_orientation_correction_wxyz'])
-        if not np.isfinite(q).all() or np.linalg.norm(q)<1e-6:raise ValueError('invalid IMU quaternion')
-        self.put('imu',q,stamp(msg))
+        # The 1 kHz callbacks only retain the latest immutable message. Convert
+        # the selected snapshot once per actual inference (50 Hz), not 1 kHz.
+        self.put('imu',msg,stamp(msg))
 
     def gripper(self,msg):
         raw=json.loads(msg.data)
+        if raw.get('schema') != 2 or raw.get('contract_id') != 'elf3_native66_bxi_opening_mm_v2':
+            raise ValueError('wrong gripper telemetry ABI; do not relabel radians as mm')
         samples=raw['samples']
         if len(samples)!=2:raise ValueError('both motor fields required by this training contract')
         measured,command=[],[]
         for sample,expected in zip(samples,self.cfg['gripper']['expected_identities']):
             check_sample_identity(sample,expected)
-            measured.append(float(sample['position_rad']))
-            command.append(float(sample['command']['position']))
-        if not np.isfinite(measured+command).all():raise ValueError('nonfinite motor angle')
+            measured.append(float(sample['opening_mm']))
+            command.append(float(sample['command']['position_mm']))
+        if not np.isfinite(measured+command).all():raise ValueError('nonfinite gripper opening')
         # No 30/50ms freshness cutoff. Retain receipt/source times for offline inspection.
         self.put('gripper',(np.array(measured),np.array(command)),raw['monotonic'])
         self.put('gripper_sources',dict(training_eligible=raw.get('training_eligible'),
@@ -110,12 +117,19 @@ class Collector(Node):
                 command_monotonic=x['command']['sent_monotonic']) for x in samples]),raw['monotonic'])
 
     def enqueue(self,item):
-        while not self.quit.is_set():
-            try:self.queue.put(item,timeout=.1);return
-            except queue.Full:continue  # Backpressure, not put_nowait/drop-and-abort.
-        if self.failure:raise RuntimeError(self.failure)
+        try:
+            self.queue.put_nowait(item)
+        except queue.Full:
+            # Blocking here used to leave old tokens in DDS while state/images
+            # advanced. Never silently mix them or grow memory without bounds.
+            self.failure='collection writer cannot keep up: receive queue full'
+            self.quit.set()
+            self.get_logger().error(self.failure)
 
     def inference(self,msg):
+        # Keep draining DDS while idle/saving. Those tokens belong to no episode.
+        if not self.session.recording or self.session.busy or self.quit.is_set():
+            return
         raw=json.loads(msg.data)
         if raw.get('motion_token_valid') is not True or raw.get('model_sha256')!=MODEL_SHA:
             raise ValueError('not a valid token from the configured SONIC model')
@@ -141,15 +155,22 @@ class Collector(Node):
               and manager.stream_mode==1 and raw.get('policy_status')=='live_reference')
         smpl=np.asarray(pose.fields['smpl_pose'],dtype=np.float32).reshape(-1,63)[0].copy() if live else np.zeros(63,dtype=np.float32)
         if smpl.size!=63:raise ValueError(f'Expected official 63 SMPL values, got {smpl.size}')
-        body=snapshot['state'][0];grip,gripcmd=snapshot['gripper'][0]
+        state=snapshot['state'][0];command=snapshot['command'][0];imu=snapshot['imu'][0]
+        body=self.body(state.position,state.name)
+        target=self.body(command.pos,command.actuators_name)
+        q=quaternion_multiply_wxyz([imu.orientation.w,imu.orientation.x,imu.orientation.y,imu.orientation.z],
+            self.cfg['robot']['imu_orientation_correction_wxyz'])
+        if not np.isfinite(q).all() or np.linalg.norm(q)<1e-6:raise ValueError('invalid IMU quaternion')
+        grip,gripcmd=snapshot['gripper'][0]
         frame={'observation.state':np.concatenate((body,grip)).astype(np.float32),
-            'observation.projected_gravity':sonic_projected_gravity(snapshot['imu'][0],body).astype(np.float32),
-            'action.wbc':np.concatenate((snapshot['command'][0],gripcmd)).astype(np.float32),
+            'observation.projected_gravity':sonic_projected_gravity(q,body).astype(np.float32),
+            'action.wbc':np.concatenate((target,gripcmd)).astype(np.float32),
             'action.motion_token':token,'teleop.smpl_pose':smpl}
         for key in CAMERAS:frame['observation.images.'+key]=snapshot[key][0]
         provenance=dict(inference_sequence=seq,inference_stamp_unix=source,received_monotonic=received,
             source_stamps={k:v[1] for k,v in snapshot.items()},
             receipt_ages_s={k:received-v[2] for k,v in snapshot.items()},
+            inference_receipt_delay_s=self.get_clock().now().nanoseconds*1e-9-source,
             source_clock_domains={'gripper':'robot_monotonic','other':'ROS_header'},
             live_pose=bool(live),gripper_sources=snapshot.get('gripper_sources',(None,))[0])
         self.enqueue(('frame',(frame,provenance)))
@@ -162,31 +183,52 @@ class Collector(Node):
                 self.enqueue(('command',('pose' if mode else 'pause',packet.received_monotonic)))
                 self.mode=mode
             event=self.gate.accept(packet,time.monotonic(),time.time())
-            if event:self.enqueue(('command',(event,packet.received_monotonic)))
+            if event:
+                if self.session.busy:
+                    self.counts['button_while_saving']+=1
+                    print('COLLECTION_BUSY: official writer is finishing the previous episode',flush=True)
+                else:self.enqueue(('command',(event,packet.received_monotonic)))
 
     def write_loop(self):
         try:
             last_status=0.
             while True:
                 try:kind,value=self.queue.get(timeout=.2)
-                except queue.Empty:kind,value=None,None
+                except queue.Empty:
+                    if self.quit.is_set():break
+                    kind,value=None,None
                 if kind=='stop':break
-                if kind=='frame':self.session.add(*value)
+                if kind=='frame':
+                    started=time.monotonic()
+                    frame,provenance=value
+                    provenance['writer_queue_age_s']=started-provenance['received_monotonic']
+                    self.session.add(frame,provenance)
+                    self.performance=dict(add_frame_ms=(time.monotonic()-started)*1000,
+                        writer_queue_age_ms=provenance['writer_queue_age_s']*1000,
+                        inference_receipt_delay_ms=provenance['inference_receipt_delay_s']*1000)
                 elif kind=='command':self.session.handle(*value)
                 if time.monotonic()-last_status>=1:
                     status=self.session.publish_status()
                     print('COLLECTION_STATE='+json.dumps(dict(phase=status['phase'],accepted_rows=status['accepted_rows'],
-                        missing=status['missing'],queue=self.queue.qsize(),counts=self.counts)),flush=True)
+                        missing=status['missing'],queue=self.queue.qsize(),counts=self.counts,
+                        performance=self.performance,encoders={k:w.performance() for k,w in
+                            (self.session.data_exporter.video_writers.items() if self.session.data_exporter is not None else [])})),flush=True)
                     last_status=time.monotonic()
         except BaseException as exc:
-            self.failure=str(exc);self.session.fail(exc);self.quit.set()
+            self.failure=str(exc);self.quit.set()
         finally:
-            try:self.session.close()
+            try:
+                if self.failure:
+                    self.session.fail(self.failure)
+                    if self.session.recording:self.session.handle('interrupt')
+                self.session.close()
             except BaseException as exc:self.failure=str(exc);self.session.fail(exc)
 
     def close(self):
         self.pico.close();self.manager.close()
-        if not self.quit.is_set():self.enqueue(('stop',None))
+        # Stop ingress, drain already frozen frames, then finalize. No full-queue
+        # sentinel and no backpressure in a ROS callback.
+        self.quit.set()
         self.worker.join()
         self.quit.set()
 
@@ -194,7 +236,7 @@ class Collector(Node):
 def main():
     p=argparse.ArgumentParser();p.add_argument('--config',type=Path,required=True);a=p.parse_args()
     rclpy.init();node=Collector(yaml.safe_load(a.config.read_text()))
-    executor=MultiThreadedExecutor(num_threads=8);executor.add_node(node)
+    executor=SingleThreadedExecutor();executor.add_node(node)
     try:
         while rclpy.ok() and not node.quit.is_set():executor.spin_once(timeout_sec=.2)
     except KeyboardInterrupt:pass

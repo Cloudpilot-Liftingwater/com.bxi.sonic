@@ -1,0 +1,20 @@
+{
+  "profile": "bxi_gripper_mm_v1",
+  "contract_id": "elf3_native66_bxi_opening_mm_v2",
+  "position_unit": "mm",
+  "velocity_unit": "mm/s",
+  "effort_unit": "N",
+  "firmware_series": ["0.3.x", "1.4.x"],
+  "build": "50L_gripper",
+  "closed_mm": 0.0,
+  "open_mm": 70.0,
+  "kp": 2.0,
+  "kd": 0.05,
+  "speed_mm_s": 326.6666667,
+  "acceleration_mm_s2": 6533.3333333,
+  "max_vel_register_rad_s": 45.0,
+  "current_limit_a": 4.8889,
+  "aux_enabled": false,
+  "mapping_source": "Official formulas; v=round(89.5*max_vel/(2*pi)), F=current_limit*0.07/(2*0.007125). Defaults give 641 mm/s and 24.01565 N; wiki approximate examples differ slightly.",
+  "trajectory_note": "Same full-stroke time as previous 300deg/1400deg_s and acceleration ratio. This is a trajectory choice, NOT a conversion of old datasets."
+}

@@ -1,6 +1,6 @@
 """Explicit per-side collection identity, not motor discovery or configuration."""
 
-PROFILES = {'dm': 'dm_follow8', 'bxi': 'bxi_colleague_rad_v1'}
+PROFILES = {'dm': 'dm_follow8', 'bxi': 'bxi_gripper_mm_v1'}
 FIELDS = ('side', 'bus', 'motor_id', 'protocol', 'profile', 'position_unit', 'effort_unit')
 
 
@@ -15,7 +15,7 @@ def identities(left='dm', right='dm', left_id=None, right_id=None, *, left_bus=5
         if type(motor) is not int or not 1 <= motor <= 15:
             raise ValueError('collection motor ID must be an integer in 1..15')
         result.append(dict(side=side, bus=bus, motor_id=motor, protocol=protocol,
-            profile=PROFILES[protocol], position_unit='rad', effort_unit='Nm'))
+            profile=PROFILES[protocol], position_unit='mm' if protocol=='bxi' else 'rad', effort_unit='N' if protocol=='bxi' else 'Nm'))
     return validate_identities(result)
 
 
@@ -29,8 +29,9 @@ def validate_identities(value):
         if (item['side'] != side or type(item['bus']) is not int or item['bus'] not in (5, 6)
                 or type(item['motor_id']) is not int or not 1 <= item['motor_id'] <= 15
                 or item['protocol'] not in PROFILES
-                or item['profile'] != PROFILES[item['protocol']]
-                or item['position_unit'] != 'rad' or item['effort_unit'] != 'Nm'):
+                or (item['profile'], item['position_unit'], item['effort_unit']) not in (
+                    {(PROFILES['dm'], 'rad', 'Nm')} if item['protocol']=='dm' else
+                    {('bxi_gripper_mm_v1', 'mm', 'N'), ('bxi_colleague_rad_v1', 'rad', 'Nm')})):
             raise ValueError('invalid gripper side/bus/ID/protocol/profile/units')
     if value[0]['bus'] == value[1]['bus']:
         raise ValueError('left/right grippers must use distinct CAN5/CAN6 buses')

@@ -2,6 +2,7 @@
 from pathlib import Path
 import queue
 import threading
+import time
 
 import av
 import numpy as np
@@ -26,6 +27,9 @@ class VideoWriter:
         self._stopped = False
         self.encoder_options = {}
         self.thread_count = 0
+        self._frames = 0
+        self._encode_s = self._encode_max_s = self._put_wait_s = 0.
+        self._started_at = None
 
     def _assert_dimensions(self, frame: np.ndarray) -> None:
         if frame.shape != (self.height, self.width, 3) or frame.dtype != np.uint8:
@@ -52,10 +56,12 @@ class VideoWriter:
             raise
 
     def _put(self, value):
+        started = time.monotonic()
         while True:
             self._raise_error()
             try:
                 self.queue.put(value, timeout=.1)
+                self._put_wait_s += time.monotonic() - started
                 self._raise_error()
                 return
             except queue.Full:
@@ -79,8 +85,14 @@ class VideoWriter:
                 if frame is None:
                     break
                 self._assert_dimensions(frame)
+                started = time.monotonic()
+                if self._started_at is None: self._started_at = started
                 for packet in self.stream.encode(av.VideoFrame.from_ndarray(frame, format="rgb24")):
                     self.container.mux(packet)
+                elapsed = time.monotonic() - started
+                self._encode_s += elapsed
+                self._encode_max_s = max(self._encode_max_s, elapsed)
+                self._frames += 1
             self._flush_stream()
         except BaseException as exc:
             self._error = exc
@@ -89,6 +101,13 @@ class VideoWriter:
                 self.container.close()
             except BaseException as exc:
                 self._error = self._error or exc
+
+    def performance(self):
+        # Small scalar snapshot for field diagnosis; never probes the robot.
+        n = self._frames
+        return dict(frames=n, queue=self.queue.qsize(), threads=self.thread_count,
+                    encode_mean_ms=1000*self._encode_s/max(n, 1),
+                    encode_max_ms=1000*self._encode_max_s, put_wait_s=self._put_wait_s)
 
     def _flush_stream(self) -> None:
         packets = self.stream.encode()

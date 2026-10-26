@@ -20,7 +20,14 @@ def verify(path, session_path):
         return dict(category='EMPTY_RECORDING',num_frames=0,readback='PASS',pause_resume_verified=False,
                     outcome=outcome,collector_release=header['collector_release'],events=events)
     root=path/'lerobot';info=json.loads((root/'meta/info.json').read_text())
-    if info['script_config']['gripper_coordinate']!='absolute_motor_radians':raise ValueError('Wrong motor coordinate')
+    cfg=info['script_config']
+    if cfg.get('gripper_coordinate') == 'absolute_gripper_opening':
+        if cfg.get('gripper_position_unit') != 'mm' or cfg.get('contract_id') != 'elf3_native66_bxi_opening_mm_v2':
+            raise ValueError('Incomplete mm contract identity')
+        unit='mm'
+    elif cfg.get('gripper_coordinate') == 'absolute_motor_radians':
+        unit='rad'  # Historical readback only; export/train defaults reject v1.
+    else:raise ValueError('Unknown gripper coordinate')
     metas=[json.loads(line) for line in (root/'meta/episodes.jsonl').read_text().splitlines()]
     if len(metas)!=1 or metas[0]['length']!=n:raise ValueError('Episode metadata does not match saved rows')
     df=pd.read_parquet(next(root.glob('data/*/*.parquet')))
@@ -59,7 +66,7 @@ def verify(path, session_path):
     return dict(category={'saved':'SAVED_PASS','discarded':'DISCARDED_EXCLUDED','interrupted':'INTERRUPTED_PRESERVED'}[outcome],
         num_frames=n,readback='PASS',decoded_video_frames=3*n,events=events,pause_resume_verified=resumed,
         outcome=outcome,collector_release=header['collector_release'],median_source_hz=rates[0] if rates else None,
-        measured_motor_units='rad',commanded_motor_units='rad')
+        measured_motor_units=unit,commanded_motor_units=unit)
 
 
 if __name__=='__main__':

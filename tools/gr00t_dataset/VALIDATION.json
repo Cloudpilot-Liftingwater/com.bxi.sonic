@@ -1,6 +1,12 @@
 {
-  "status": "PASS",
-  "checks": {
+  "release": "20261021-collection-15-nonblocking-ingress",
+  "local_validation": "PASS_WITH_IMAGE_RECEIVE_GAPS",
+  "hardware_validated": false,
+  "unit_tests": {
+    "ingress": 5,
+    "writer_export": 19
+  },
+  "official_session_checks": {
     "two_save_two_discard_and_same_episode_pause": true,
     "one_real_row_saved": true,
     "empty_discard_does_not_crash": true,
@@ -8,103 +14,115 @@
     "jitter_and_old_imu_not_deleted": true,
     "official_stats_cache_fingerprints": true,
     "official_zero_smpl_cleanup_same_episode": true,
-    "receipt_snapshot_and_duplicate_token": true,
-    "official_source_identity": true,
-    "official_gr00t_loader_40x66_and_motor_radian_roundtrip": true,
-    "legacy_export_and_writer_tests": 19,
-    "native_identity_migration_tests": 18,
-    "archived_ros_message_import": true,
-    "download_review_two_saved_two_discarded": true,
-    "upgrade_from_v12_and_v13": true
+    "official_source_identity": true
   },
-  "root": "/data/tmp/official_v14_validation_i0_bob7h",
-  "export": {
-    "status": "TRAINING_DATASET_READY",
-    "dataset": "/data/tmp/official_v14_validation_i0_bob7h/export",
-    "frames": 120,
-    "training_sequences": 2,
-    "training_ready": true,
-    "short_episode_indices": [],
-    "official_loader_run": false,
-    "cleanup": [
-      {
-        "source": "/data/tmp/official_v14_validation_i0_bob7h/data/session_nadsz7kn/episode_0000/lerobot",
-        "total_episodes": 1,
-        "episodes_with_stale": 0,
-        "total_frames": 60,
-        "frames_removed": 0,
-        "zero_frames": 0,
-        "frozen_leadin_frames": 0,
-        "episodes_dropped": 0,
-        "episodes_discarded": 0
+  "limitations": [
+    "Local workstation CPU is not the robot; field 35 Hz stage attribution still needs instrumented retest",
+    "No robot hardware/controller/SONIC process was started or changed",
+    "Latest/BEST_EFFORT image subscription has independent receive gaps; token completeness is not image freshness",
+    "No actual training or model forward was performed"
+  ],
+  "ros_replay": {
+    "published": {
+      "tokens": 6000,
+      "images": 3651,
+      "states": 122000,
+      "seconds": 122.0001235959935
+    },
+    "written": 6000,
+    "queue_max": 1,
+    "token_rate_hz": 49.999979126956916,
+    "queue_age_ms": {
+      "median": 0.5403289978858083,
+      "p99": 4.4143615278881185,
+      "min": 0.1825560029828921,
+      "max": 19.73123400239274
+    },
+    "receipt_delay_ms": {
+      "median": 1.254439353942871,
+      "p99": 10.64773797988893,
+      "min": 0.4360675811767578,
+      "max": 20.697355270385742
+    },
+    "state_delta_ms": {
+      "median": 0.0,
+      "p99": 8.341391086578371,
+      "min": 0.0,
+      "max": 16.954660415649414
+    },
+    "image_ages_ms": {
+      "ego_view": {
+        "median": 42.13881492614746,
+        "p99": 354.6693682670598,
+        "min": 0.0,
+        "max": 697.0686912536621
       },
-      {
-        "source": "/data/tmp/official_v14_validation_i0_bob7h/data/session_egwliiuk/episode_0000/lerobot",
-        "total_episodes": 1,
-        "episodes_with_stale": 0,
-        "total_frames": 60,
-        "frames_removed": 0,
-        "zero_frames": 0,
-        "frozen_leadin_frames": 0,
-        "episodes_dropped": 0,
-        "episodes_discarded": 0
+      "left_wrist": {
+        "median": 50.77660083770752,
+        "p99": 290.98635435104376,
+        "min": 0.0,
+        "max": 417.0558452606201
       },
-      {
-        "source": "/data/tmp/official_v14_validation_i0_bob7h/data/session_3wg7mnty/episode_0000/lerobot",
-        "total_episodes": 1,
-        "episodes_with_stale": 0,
-        "total_frames": 0,
-        "frames_removed": 0,
-        "zero_frames": 0,
-        "frozen_leadin_frames": 0,
-        "episodes_dropped": 0,
-        "episodes_discarded": 1
-      },
-      {
-        "source": "/data/tmp/official_v14_validation_i0_bob7h/data/session_i57xour3/episode_0000/lerobot",
-        "total_episodes": 1,
-        "episodes_with_stale": 0,
-        "total_frames": 0,
-        "frames_removed": 0,
-        "zero_frames": 0,
-        "frozen_leadin_frames": 0,
-        "episodes_dropped": 0,
-        "episodes_discarded": 1
+      "right_wrist": {
+        "median": 65.29033184051514,
+        "p99": 556.2434530258179,
+        "min": 2.7112960815429688,
+        "max": 918.0889129638672
       }
-    ],
+    },
+    "missing_token_sequences": [],
     "hardware_commands_sent": 0
   },
-  "hardware_commands_sent": 0,
-  "limitation": "Synthetic offline replay; no robot or trained model executed",
-  "not_run": [
-    "robot deployment",
-    "robot camera/SONIC live capture",
-    "model finetuning",
-    "trained model open-loop inference"
-  ],
-  "hd_replay": {
-    "rows": 600,
-    "target_hz": 50,
-    "elapsed_s": 11.981048197994824,
-    "actual_hz": 50.07909075104275,
-    "max_add_ms": 19.15357400139328,
-    "save_seconds": 0.33736812400456984,
-    "readback": {
-      "category": "SAVED_PASS",
-      "num_frames": 600,
-      "readback": "PASS",
-      "decoded_video_frames": 1800,
-      "events": [],
-      "pause_resume_verified": false,
-      "outcome": "saved",
-      "collector_release": "20261021-collection-14-official-session",
-      "median_source_hz": 50.00000000000995,
-      "measured_motor_units": "rad",
-      "commanded_motor_units": "rad"
+  "writer_profile": {
+    "before": {
+      "rows": 600,
+      "total_s": 9.914084092000849,
+      "sustained_hz": 60.51996275521895,
+      "threads": 1,
+      "add": {
+        "mean_ms": 15.20507895508975,
+        "p99_ms": 25.73886600046535,
+        "max_ms": 38.59680099412799
+      }
     },
-    "hardware_commands": 0,
-    "scope": "workstation CPU replay of real RGB texture, synthetic numerics; not robot validation",
-    "directory": "/data/tmp/official_v14_HD_replay_ft9jsyb7"
+    "after": {
+      "rows": 1000,
+      "total_s": 11.855201622995082,
+      "sustained_hz": 84.35115924644741,
+      "threads": 0,
+      "add": {
+        "mean_ms": 11.38383166915446,
+        "p99_ms": 19.181037651433144,
+        "max_ms": 23.171849999926053
+      }
+    }
   },
-  "delivery_check_local_files": 453
+  "gr00t_loader": {
+    "status": "EXISTING_ELF3_NATIVE_DATA_PATH_PASS",
+    "embodiment_tag": "elf3_native_1d",
+    "projector_slot": 14,
+    "episodes": 2,
+    "decoded_video_frames": 360,
+    "rows": 120,
+    "state_shape": [
+      1,
+      34
+    ],
+    "action_shape": [
+      40,
+      66
+    ],
+    "views": 3,
+    "test_scope": "official loader + CPU video decoding + statistics + training sampling + normalization",
+    "sampler_steps": 42,
+    "motor_radian_normalization_roundtrip": true,
+    "pretrained_processor_run": false,
+    "finetuning_run": false,
+    "hardware_test": false
+  },
+  "installer": {
+    "v14_upgrade": true,
+    "idempotent": true,
+    "unknown_changes_refused": true
+  }
 }

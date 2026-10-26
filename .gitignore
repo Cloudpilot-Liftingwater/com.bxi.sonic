@@ -6,3 +6,6 @@ __pycache__/
 MUJOCO_LOG.TXT
 .runtime/
 tools/customer/site.local.json
+
+.venv/
+.ruff_cache/

@@ -1,7 +1,7 @@
 """ELF3 field adapter for the vendored NVIDIA SONIC/LeRobot writer."""
 from pathlib import Path
 
-from contract import CAMERAS, FPS, SCHEMA, VECTOR_NAMES, MODEL_SHA, modality
+from contract import CONTRACT_ID, COORDINATE, POSITION_UNIT, CAMERAS, FPS, SCHEMA, VECTOR_NAMES, MODEL_SHA, modality
 
 
 def dependencies():
@@ -31,7 +31,7 @@ def create(path, task, *, camera_shapes=None, online=False, record_smpl=False, s
         task=task, robot_type=SCHEMA, overwrite_existing=False,
         script_config=dict(
             **(source_metadata or {}), tokenizer_sha256=MODEL_SHA,
-            adapter="elf3_ros_official_online_v1" if online else "elf3_ros_saved_source_v1", gripper_coordinate="absolute_motor_radians",
+            adapter="elf3_ros_official_online_v1" if online else "elf3_ros_saved_source_v1", gripper_coordinate=COORDINATE, gripper_position_unit=POSITION_UNIT, contract_id=CONTRACT_ID,
             source="ELF3 ROS2 synchronized actual inference rows",
             camera_policy="latest_available_rgb_on_actual_inference_rows",
         ),
@@ -39,7 +39,9 @@ def create(path, task, *, camera_shapes=None, online=False, record_smpl=False, s
     if online:
         for writer in exporter.video_writers.values():
             writer.encoder_options = {"preset": "ultrafast", "crf": "18"}
-            writer.thread_count = 1
+            # A single 1080p encoder was the throughput bottleneck. Bound the
+            # HD codec to four threads; small wrist streams retain one each.
+            writer.thread_count = 4 if writer.width * writer.height >= 1920 * 1080 else 1
     return exporter
 
 

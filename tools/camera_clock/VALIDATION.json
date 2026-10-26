@@ -1,0 +1,16 @@
+{
+  "release": "20261026-camera-clock-refresh",
+  "previous_library_sha256": "f9fd906092b666bf017898928c19d1f6e3240dad1a5ffbbe54138e63fdeb11ee",
+  "library_sha256": "513f7143ccbb376d92350ef28ab084e340e3c2bb840cafdf7c6874283a2e9c76",
+  "source_version": "usb_cam 0.8.1",
+  "offline_test": "real read_frame with mocked ioctl and positive/negative clock steps; no hardware IO",
+  "field_date": "2026-10-23",
+  "field": {
+    "left_matched": 456,
+    "right_matched": 455,
+    "header_clock_error_ms": -0.000715,
+    "left_kernel_to_receive_ms": 128.776,
+    "right_kernel_to_receive_ms": 128.839
+  },
+  "limitation": "Remaining frame age is not removed; no guarantee of zero optical latency"
+}

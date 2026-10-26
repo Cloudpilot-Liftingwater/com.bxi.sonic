@@ -1,0 +1,7 @@
+{
+  "project": "ros-drivers/usb_cam",
+  "version": "0.8.1",
+  "source_url": "https://github.com/ros-drivers/usb_cam/tree/0.8.1",
+  "scope": "Headers, core library source and licensing/package metadata needed by tools/camera_clock/build.py; upstream launch/docs/node applications omitted",
+  "local_patch": "../../CLOCK_REFRESH.patch"
+}

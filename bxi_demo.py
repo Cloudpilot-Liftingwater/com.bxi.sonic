@@ -6,35 +6,39 @@ import math
 from pathlib import Path
 from threading import RLock
 import time
-from types import SimpleNamespace
 
 from .gripper import DMMotor, MotorFeedback
 from .state import SonicTeleopState
+from .bxi_gripper_protocol import settings as mm_settings, profile as mm_profile
 
-GRIPPER_RELEASE = '20261014-demo-03-speed1400'
+GRIPPER_RELEASE = '20261022-demo-04-opening-mm'
 LIBRARY_PATH = Path(__file__).with_name('bxi_demo_native.so')
-OPEN_RAD = math.radians(300.)
+OPEN_MM = 70.
 BYTES = C.c_uint8 * 8
 
 
 class Native:
     def __init__(self):
+        self.settings = mm_settings()
         self.lib = C.CDLL(str(LIBRARY_PATH))
-        if not hasattr(self.lib, 'demo_abi') or self.lib.demo_abi() != 1:
+        if not hasattr(self.lib, 'demo_abi') or self.lib.demo_abi() != 2:
             self.close()
-            raise RuntimeError('wrong colleague bridge ABI')
-        self.lib.demo_new.argtypes, self.lib.demo_new.restype = [C.c_float], C.c_void_p
+            raise RuntimeError('requires gripper mm bridge ABI 2; old rad library rejected')
+        self.lib.demo_new.argtypes, self.lib.demo_new.restype = [C.c_float] * 7, C.c_void_p
         self.lib.demo_free.argtypes, self.lib.demo_free.restype = [C.c_void_p], None
         self.lib.demo_step.argtypes = [C.c_void_p, C.c_float, C.c_float, C.c_int, C.POINTER(C.c_uint8)]
         self.lib.demo_step.restype = C.c_int
-        self.lib.demo_feedback.argtypes = [C.POINTER(C.c_uint8), C.POINTER(C.c_float)]
+        self.lib.demo_feedback.argtypes = [C.POINTER(C.c_uint8), C.c_float, C.c_float, C.POINTER(C.c_float)]
         self.lib.demo_feedback.restype = C.c_int
+        self.lib.demo_pack.argtypes = [C.c_float] * 7 + [C.POINTER(C.c_uint8)]
+        self.lib.demo_pack.restype = C.c_int
 
     def close(self):
         _ctypes.dlclose(self.lib._handle)
 
     def new(self, position):
-        handle = self.lib.demo_new(position)
+        v = self.settings
+        handle = self.lib.demo_new(position, v['speed_mm_s'], v['acceleration_mm_s2'], v['kp'], v['kd'], v['velocity_limit_mm_s'], v['force_limit_n'])
         if not handle:
             raise RuntimeError('cannot allocate colleague reference')
         return handle
@@ -45,9 +49,15 @@ class Native:
             raise ValueError('invalid colleague position command')
         return bytes(data)
 
+    def feedback_probe(self):
+        data = BYTES()
+        if self.lib.demo_pack(0, 0, 0, 0, 0, self.settings['velocity_limit_mm_s'], self.settings['force_limit_n'], data):
+            raise ValueError('invalid mm feedback probe')
+        return bytes(data)
+
     def feedback(self, data, now):
         values = (C.c_float * 5)()
-        if self.lib.demo_feedback(BYTES.from_buffer_copy(bytes(data)), values):
+        if self.lib.demo_feedback(BYTES.from_buffer_copy(bytes(data)), self.settings['velocity_limit_mm_s'], self.settings['force_limit_n'], values):
             raise ValueError('not a node 1 feedback frame')
         return MotorFeedback(1, None, *values, now)
 
@@ -61,7 +71,8 @@ class Side:
     trigger: object = None
     trigger_at: object = None
     trigger_seen: bool = False
-    target: float = 300.
+    target: float = OPEN_MM
+    last_probe: float = -math.inf
     holding: bool = False
     tx_count: int = 0
     rx_count: int = 0
@@ -101,17 +112,15 @@ class BxiDemoState(SonicTeleopState):
                 return
             self._gripper_session_active = True
             self._sides = {bus: Side() for bus in (5, 6)}
-            self._gripper_profiles = {bus: SimpleNamespace(bus=bus, can_id=1,
-                protocol=SimpleNamespace(value='bxi'), position_range=(-12.5,12.5),
-                velocity_range=(-45.,45.), torque_range=(-40.,40.)) for bus in (5,6)}
+            self._gripper_profiles = {}
             self._demo_last_tick = time.monotonic()
             self.logger.info('SONIC夹爪软件版本='+GRIPPER_RELEASE)
-            self._demo_log('entry', kp=25., kd=.25, open_degrees=300., closed_degrees=0.,
-                           left_bus=self._left_bus, right_bus=self._right_bus,
-                           speed_degrees_s=1400., acceleration_degrees_s2=28000.,
-                           exit_action='stop_sending_only', body_zero_torque=False)
             try:
                 self._native = Native()
+                values = self._native.settings
+                self._gripper_profiles = {bus: mm_profile(bus, values) for bus in (5,6)}
+                self._demo_log('entry', **values, left_bus=self._left_bus, right_bus=self._right_bus,
+                               exit_action='stop_sending_only', body_zero_torque=False)
             except Exception as exc:
                 self._demo_log('failure', reason='native_load: '+str(exc))
                 self._native = None
@@ -162,7 +171,7 @@ class BxiDemoState(SonicTeleopState):
                 elif side.phase == 'wait_feedback':
                     side.handle = self._native.new(f.position)
                     side.phase = 'opening'
-                    self._demo_log('first_feedback', bus, position_degrees=math.degrees(f.position))
+                    self._demo_log('first_feedback', bus, position_mm=f.position)
             except Exception as exc:
                 self._fail_side(bus, 'feedback: '+str(exc))
 
@@ -198,18 +207,27 @@ class BxiDemoState(SonicTeleopState):
                             self._gripper_armed = True
                             self._demo_log('enable_tx', bus, can_id=1, flags=5, data='FFFFFFFFFFFFFFFC',
                                            physical_delivery_verified=False)
+                    # New firmware replies to ordinary MIT frames. Do not wait forever
+                    # for the one-shot enable frame to produce unsolicited feedback.
+                    if side.phase == 'wait_feedback':
+                        if now-side.enabled_at > 3.:
+                            self._fail_side(bus, 'no first mm feedback within 3s')
+                            continue
+                        if now-side.last_probe >= .02:
+                            self._send(bus, self._native.feedback_probe())
+                            side.last_probe = now
                     f = side.feedback
                     if side.phase in ('opening', 'control'):
                         if not 0 <= now-f.received_at <= .3:
                             self._fail_side(bus, 'feedback stale >300ms')
                             continue
-                        if side.phase == 'opening' and abs(math.degrees(f.position)-300.) <= 2.:
+                        if side.phase == 'opening' and abs(f.position-OPEN_MM) <= .5:
                             side.phase = 'control'
-                            self._demo_log('open_ready', bus, position_degrees=math.degrees(f.position))
+                            self._demo_log('open_ready', bus, position_mm=f.position)
                         fresh = side.trigger_at is not None and 0 <= now-side.trigger_at <= .25
                         follow = side.phase == 'opening' or not side.trigger_seen or fresh
                         if side.phase == 'control' and fresh:
-                            side.target = 300.*(1.-side.trigger)
+                            side.target = OPEN_MM*(1.-side.trigger)
                         if not follow and not side.holding:
                             self._native.lib.demo_free(side.handle)
                             side.handle = None
@@ -225,12 +243,12 @@ class BxiDemoState(SonicTeleopState):
                                                   mode='tracking' if follow else 'input_hold')
                     if now-side.last_report >= 1.:
                         side.last_report = now
-                        self._demo_log('status', bus, phase=side.phase, target_degrees=side.target,
-                            position_degrees=None if f is None else math.degrees(f.position),
+                        self._demo_log('status', bus, phase=side.phase, target_mm=side.target,
+                            position_mm=None if f is None else f.position,
                             feedback_age_s=None if f is None else now-f.received_at,
                             tx_count=side.tx_count, rx_count=side.rx_count,
                             last_tx=side.last_tx, trigger=side.trigger,
-                            velocity_degrees_s=None if f is None else math.degrees(f.velocity),
+                            velocity_mm_s=None if f is None else f.velocity,
                             temperatures_c=None if f is None else [f.mos_temperature_c,f.motor_temperature_c])
                 except Exception as exc:
                     self._fail_side(bus, 'control: '+str(exc))
@@ -238,7 +256,7 @@ class BxiDemoState(SonicTeleopState):
             self._gripper_control_snapshot = cycle
 
     def _soft_limits_for(self, bus, profile):
-        return OPEN_RAD, 0.
+        return OPEN_MM, 0.
 
     def prepare_exit(self, ctx, to_state, *, trigger, force=False):
         return True

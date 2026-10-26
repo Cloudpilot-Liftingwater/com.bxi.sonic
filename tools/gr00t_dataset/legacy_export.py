@@ -134,6 +134,7 @@ def training_image(frame):
 
 
 def export(episodes, output, task=None, *, inspection_only=False):
+    raise ValueError("This exporter is for legacy rad recordings. Use the frozen v15 tools; the current writer/contract is opening-mm v2. Never relabel old data.")
     episodes = [Path(p).expanduser().resolve(strict=True) for p in episodes]
     if not episodes:
         raise ValueError("At least one saved source episode is required")
