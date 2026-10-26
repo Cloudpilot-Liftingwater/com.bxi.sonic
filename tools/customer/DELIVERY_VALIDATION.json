@@ -40,5 +40,17 @@
     "path_tests": 5,
     "file_check": "PASS",
     "note": "Release archive extracted outside repository; no robot access"
+  },
+  "environment_migration": {
+    "tested_at": "2026-10-26",
+    "regression_tests": 10,
+    "system_python_venv_creation": "PASS",
+    "pico_dependency_imports": "PASS",
+    "python_base": "/usr/bin/python3.10",
+    "conda_auto_discovery_removed": true,
+    "elf_files_scanned": 55,
+    "conda_dynamic_link_paths": 0,
+    "shared_workstation_environments_removed": false,
+    "hardware_commands": 0
   }
 }

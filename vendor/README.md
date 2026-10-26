@@ -1,7 +1,8 @@
 # SONIC vendor runtimes
 
 This directory follows the framework's target-scoped vendor layout. SONIC
-first probes every user-managed Python environment without these paths. Only
+first probes supported system-Python/venv environments without these paths.
+Conda discovery and Conda-based interpreters are not used. Only
 when none is usable does the launcher add the directory matching the current
 OS, CPU architecture and Python ABI to the manager process.
 
